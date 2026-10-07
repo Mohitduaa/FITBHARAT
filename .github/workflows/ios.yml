@@ -1,7 +1,7 @@
-name: iOS unsigned IPA
+name: iOS IPA
 
-# Builds the shared Kotlin framework and the iOS app on a GitHub macOS runner and uploads an unsigned
-# FitBharat-unsigned.ipa. Install it on an iPhone with AltStore / Sideloadly, which sign it with your Apple ID.
+# Builds the shared Kotlin framework, the iOS app and its home screen widget on a GitHub macOS runner and
+# uploads FitBharat.ipa. Install it on an iPhone with AltStore / Sideloadly, which sign it with your Apple ID.
 on:
   push:
     branches: [main]
@@ -47,11 +47,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      # project-widget.yml is the app plus the WidgetKit extension.
       - name: Generate Xcode project
         working-directory: iosApp
-        run: xcodegen generate
+        run: xcodegen generate --spec project-widget.yml
 
-      - name: Build app (unsigned)
+      - name: Build app
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
@@ -77,57 +78,26 @@ jobs:
           IN_APP=$(/usr/libexec/PlistBuddy -c "Print :GEMINI_API_KEY" build/ios/Build/Products/Release-iphoneos/FitBharat.app/Info.plist 2>/dev/null || true)
           if [ "$IN_APP" = "$GEMINI_API_KEY" ] && [ -n "$IN_APP" ]; then echo "Info.plist key: matches the secret"; else echo "::warning::Info.plist key does not match the secret (length ${#IN_APP})"; fi
 
-      - name: Package IPA
+      # The widget shares data with the app through an App Group, so both bundles are ad-hoc signed with their
+      # entitlements; the sideloading tool reads them from that signature when it re-signs.
+      - name: Sign and package IPA
         run: |
           APP=build/ios/Build/Products/Release-iphoneos/FitBharat.app
-          mkdir -p ipa/Payload
-          cp -R "$APP" ipa/Payload/
-          (cd ipa && zip -qry ../FitBharat-unsigned.ipa Payload)
-          ls -lh FitBharat-unsigned.ipa
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: FitBharat-unsigned-ipa
-          path: FitBharat-unsigned.ipa
-
-      # Second IPA: the same app plus the home screen widget. It needs an App Group, so the bundles are
-      # ad-hoc signed with their entitlements for the sideloading tool to pick up. If anything here fails,
-      # the plain IPA above is unaffected.
-      - name: Build app with widget
-        id: widget
-        continue-on-error: true
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          set -o pipefail
-          cd iosApp && xcodegen generate --spec project-widget.yml && cd ..
-          xcodebuild \
-            -project iosApp/FitBharat.xcodeproj \
-            -scheme FitBharat \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath build/ios-widget \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-            GEMINI_API_KEY="${GEMINI_API_KEY:-MY_GEMINI_API_KEY}" \
-            2>&1 | tee build/xcodebuild-widget.log
-          APP=build/ios-widget/Build/Products/Release-iphoneos/FitBharat.app
           codesign --force --sign - --entitlements iosApp/FitBharatWidget/FitBharatWidget.entitlements "$APP/PlugIns/FitBharatWidget.appex"
           codesign --force --sign - --entitlements iosApp/FitBharat/FitBharat.entitlements "$APP"
-          mkdir -p ipa-widget/Payload
-          cp -R "$APP" ipa-widget/Payload/
-          (cd ipa-widget && zip -qry ../FitBharat-with-widget.ipa Payload)
-          ls -lh FitBharat-with-widget.ipa
+          mkdir -p ipa/Payload
+          cp -R "$APP" ipa/Payload/
+          (cd ipa && zip -qry ../FitBharat.ipa Payload)
+          ls -lh FitBharat.ipa
 
       - uses: actions/upload-artifact@v4
-        if: steps.widget.outcome == 'success'
         with:
-          name: FitBharat-with-widget-ipa
-          path: FitBharat-with-widget.ipa
+          name: FitBharat-ipa
+          path: FitBharat.ipa
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: build-log
-          path: build/xcodebuild*.log
+          path: build/xcodebuild.log
           if-no-files-found: ignore

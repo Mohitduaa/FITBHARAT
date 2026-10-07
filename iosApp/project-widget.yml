@@ -1,6 +1,5 @@
-# The app plus the home screen widget. Built as a second, separate IPA because the widget needs an
-# App Group, and whether a sideloading tool accepts that is not guaranteed: the plain IPA from project.yml
-# stays available either way.
+# The app plus the home screen widget (the IPA the workflow builds). The widget needs an
+# App Group shared with the app; project.yml alone is the app without the widget.
 include:
   - project.yml
 targets:
