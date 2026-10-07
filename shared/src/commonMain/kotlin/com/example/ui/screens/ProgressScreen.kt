@@ -74,6 +74,7 @@ fun ProgressScreen(
     profile: UserProfileEntity,
     weightLogs: List<WeightLogEntity>,
     recentDailyLogs: List<DailyLogEntity>,
+    historyLogs: List<DailyLogEntity>,
     challenges: List<DesiChallenge>,
     onOpenLogWeightDialog: () -> Unit,
     onCheckInChallenge: (String) -> Unit,
@@ -140,7 +141,15 @@ fun ProgressScreen(
         if (selectedSubTab == 0) {
             item { StreaksCard(streaks = streaks) }
 
-            item { com.example.ui.components.WeeklyCaloriesChart(totals = mealTotals, calorieTarget = calorieTarget) }
+            item {
+                com.example.ui.components.HistoryChartCard(
+                    dailyLogs = historyLogs,
+                    mealTotals = mealTotals,
+                    calorieTarget = calorieTarget,
+                    waterGoalMl = profile.waterGoalMl,
+                    stepGoal = profile.stepGoal
+                )
+            }
 
             item { com.example.ui.components.BadgesCard(badges = badges) }
 

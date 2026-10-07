@@ -93,6 +93,7 @@ fun FitBharatApp(viewModel: MainViewModel) {
     val todayMeals by viewModel.todayMeals.collectAsStateWithLifecycle()
     val allWeightLogs by viewModel.allWeightLogs.collectAsStateWithLifecycle()
     val recentDailyLogs by viewModel.recentDailyLogs.collectAsStateWithLifecycle()
+    val historyLogs by viewModel.historyLogs.collectAsStateWithLifecycle()
     val challenges by viewModel.challenges.collectAsStateWithLifecycle()
     val dailyPlan by viewModel.dailyDesiPlan.collectAsStateWithLifecycle()
     val nutritionPlan by viewModel.nutritionPlan.collectAsStateWithLifecycle()
@@ -212,6 +213,7 @@ fun FitBharatApp(viewModel: MainViewModel) {
                         profile = userProfile,
                         weightLogs = allWeightLogs,
                         recentDailyLogs = recentDailyLogs,
+                        historyLogs = historyLogs,
                         challenges = challenges,
                         onOpenLogWeightDialog = { showLogWeightDialog = true },
                         onCheckInChallenge = { viewModel.checkInChallenge(it) },

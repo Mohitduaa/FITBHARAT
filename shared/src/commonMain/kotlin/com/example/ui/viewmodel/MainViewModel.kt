@@ -156,6 +156,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     val recentDailyLogs: StateFlow<List<DailyLogEntity>> = repository.getRecentDailyLogs(7)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /** The last 30 days of step / water logs for the history chart. */
+    val historyLogs: StateFlow<List<DailyLogEntity>> = repository.getRecentDailyLogs(30)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val streaks: StateFlow<List<StreakInfo>> = combine(
         userProfile,
         nutritionPlan,
