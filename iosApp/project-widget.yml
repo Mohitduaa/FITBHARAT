@@ -1,0 +1,35 @@
+# The app plus the home screen widget. Built as a second, separate IPA because the widget needs an
+# App Group, and whether a sideloading tool accepts that is not guaranteed: the plain IPA from project.yml
+# stays available either way.
+include:
+  - project.yml
+targets:
+  FitBharat:
+    entitlements:
+      path: FitBharat/FitBharat.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.fitbharat.app
+    dependencies:
+      - target: FitBharatWidget
+  FitBharatWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - FitBharatWidget
+    info:
+      path: FitBharatWidget/Info.plist
+      properties:
+        CFBundleDisplayName: FitBharat
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: FitBharatWidget/FitBharatWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.fitbharat.app
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fitbharat.app.widget
+        PRODUCT_NAME: FitBharatWidget
+        SKIP_INSTALL: YES

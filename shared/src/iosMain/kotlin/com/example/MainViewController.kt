@@ -9,6 +9,7 @@ import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.example.platform.IosPlatformServices
+import com.example.platform.IosWidgetBridge
 import com.example.ui.FitBharatRoot
 import platform.Foundation.NSBundle
 import platform.UIKit.UIViewController
@@ -35,6 +36,7 @@ fun MainViewController(): UIViewController {
         } else {
             val steps = container.platform.stepTracker
             LaunchedEffect(Unit) { steps.refresh() }
+            LaunchedEffect(Unit) { IosWidgetBridge.keepUpdated(container.repository) }
             LifecycleEventEffect(Lifecycle.Event.ON_START) {
                 steps.refresh()
                 container.platform.autoBackup.backupIfDue()

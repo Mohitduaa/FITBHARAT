@@ -25,3 +25,5 @@ iosApp/FitBharat/Info.plist
 # Leftover tooling
 .github/modernize/
 *.jks
+iosApp/FitBharatWidget/Info.plist
+iosApp/**/*.entitlements
