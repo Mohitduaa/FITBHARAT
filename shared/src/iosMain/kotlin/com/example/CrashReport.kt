@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
+
 package com.example
 
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.platform.topViewController
 import kotlin.experimental.ExperimentalNativeApi
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlin.native.setUnhandledExceptionHook
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -47,7 +50,6 @@ private fun crashFile(): String {
     return "$directory/last_crash.txt"
 }
 
-@OptIn(ExperimentalNativeApi::class)
 internal fun installCrashLogger() {
     setUnhandledExceptionHook { error ->
         runCatching {
