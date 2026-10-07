@@ -45,6 +45,9 @@
                 android:resource="@xml/widget_today_info" />
         </receiver>
         <receiver
+            android:name="com.example.platform.AutoBackupReceiver"
+            android:exported="false" />
+        <receiver
             android:name="com.example.platform.ReminderReceiver"
             android:exported="false">
             <intent-filter>

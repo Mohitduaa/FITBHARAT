@@ -17,6 +17,8 @@ interface PlatformServices {
 
     val reminders: ReminderScheduler
 
+    val autoBackup: AutoBackup
+
     fun databaseBuilder(): RoomDatabase.Builder<AppDatabase>
 
     fun logError(tag: String, message: String, throwable: Throwable? = null)
@@ -80,4 +82,41 @@ interface ReminderScheduler {
 
     /** Asks for notification permission where the OS requires it (Android 13+, iOS). */
     fun requestPermission()
+}
+
+/** Where the daily backup stands, for the settings screen. */
+data class AutoBackupState(
+    val enabled: Boolean = false,
+    /** Human-readable place the files go, or null when no folder has been chosen yet. */
+    val location: String? = null,
+    val lastBackupMillis: Long? = null,
+    /** Android lets the user pick the folder; iOS always uses the app's Files folder. */
+    val canChangeFolder: Boolean = false,
+    val error: String? = null
+)
+
+/**
+ * Writes a backup file once a day without the user doing anything, keeping the last [KEEP] days.
+ * The platform decides where (a user-picked folder on Android, the Files app on iOS).
+ */
+interface AutoBackup {
+    val state: kotlinx.coroutines.flow.StateFlow<AutoBackupState>
+
+    /** Called once by the app container with the function that produces the backup JSON. */
+    fun attach(exporter: suspend () -> String)
+
+    /** Turning it on may first ask for a folder (Android). */
+    fun setEnabled(enabled: Boolean)
+
+    fun changeFolder()
+
+    fun backupNow()
+
+    /** Runs a backup when the last one is more than a day old; call when the app comes to the foreground. */
+    fun backupIfDue()
+
+    companion object {
+        const val KEEP = 7
+        const val FILE_PREFIX = "fitbharat-auto-"
+    }
 }

@@ -35,7 +35,10 @@ fun MainViewController(): UIViewController {
         } else {
             val steps = container.platform.stepTracker
             LaunchedEffect(Unit) { steps.refresh() }
-            LifecycleEventEffect(Lifecycle.Event.ON_START) { steps.refresh() }
+            LifecycleEventEffect(Lifecycle.Event.ON_START) {
+                steps.refresh()
+                container.platform.autoBackup.backupIfDue()
+            }
             LifecycleEventEffect(Lifecycle.Event.ON_STOP) { steps.stop() }
             FitBharatRoot(container)
         }

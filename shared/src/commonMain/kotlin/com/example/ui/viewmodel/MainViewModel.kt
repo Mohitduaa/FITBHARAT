@@ -131,6 +131,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun requestNotificationPermission() = container.platform.reminders.requestPermission()
 
+    val autoBackup: com.example.platform.AutoBackup get() = container.platform.autoBackup
+
     fun refreshStepTracking() = container.platform.stepTracker.refresh()
     fun stopStepTracking() = container.platform.stepTracker.stop()
     fun requestStepPermission() = container.platform.stepTracker.requestPermission()

@@ -326,7 +326,8 @@ fun FitBharatApp(viewModel: MainViewModel) {
             backupMessage = backupMessage,
             onBackup = { viewModel.createBackup { name, content -> backupFiles.save(name, content) } },
             onRestore = { backupFiles.pick() },
-            onEnableReminders = { viewModel.requestNotificationPermission() }
+            onEnableReminders = { viewModel.requestNotificationPermission() },
+            autoBackup = viewModel.autoBackup
         )
     }
 

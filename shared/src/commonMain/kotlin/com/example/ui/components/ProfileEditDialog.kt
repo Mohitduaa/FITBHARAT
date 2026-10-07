@@ -43,6 +43,9 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import kotlinx.datetime.toLocalDateTime
+import com.example.util.toDisplayString
 import com.example.data.model.formatClock
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,7 +87,8 @@ fun ProfileEditDialog(
     backupMessage: String? = null,
     onBackup: () -> Unit = {},
     onRestore: () -> Unit = {},
-    onEnableReminders: () -> Unit = {}
+    onEnableReminders: () -> Unit = {},
+    autoBackup: com.example.platform.AutoBackup? = null
 ) {
     var confirmRestore by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf(profile.name) }
@@ -448,6 +452,7 @@ fun ProfileEditDialog(
                                 modifier = Modifier.weight(1f).testTag("backup_restore_button")
                             ) { Text("Restore") }
                         }
+                        if (!isFirstSetup && autoBackup != null) DailyBackupRow(autoBackup)
                         if (backupMessage != null) {
                             Text(
                                 text = backupMessage,
@@ -712,4 +717,61 @@ private fun ThemeModeToggle(mode: String, onChange: (String) -> Unit) {
             ) { Text(label, fontSize = 13.sp) }
         }
     }
+}
+
+/** "Daily backup" switch with where the files go and when the last one was written. */
+@Composable
+private fun DailyBackupRow(autoBackup: com.example.platform.AutoBackup) {
+    val state by autoBackup.state.collectAsState()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Daily backup", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(
+                    "Saves a backup file every day automatically and keeps the last ${com.example.platform.AutoBackup.KEEP} days.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            androidx.compose.material3.Switch(
+                checked = state.enabled,
+                onCheckedChange = { autoBackup.setEnabled(it) },
+                modifier = Modifier.testTag("daily_backup_switch")
+            )
+        }
+        if (state.enabled) {
+            state.location?.let {
+                Text("Saved to: $it", style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                state.lastBackupMillis?.let { "Last backup: ${formatBackupTime(it)}" } ?: "No backup yet",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                androidx.compose.material3.TextButton(onClick = { autoBackup.backupNow() }) { Text("Back up now") }
+                if (state.canChangeFolder) {
+                    androidx.compose.material3.TextButton(onClick = { autoBackup.changeFolder() }) { Text("Change folder") }
+                }
+            }
+        }
+        state.error?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+private fun formatBackupTime(millis: Long): String {
+    val dateTime = kotlin.time.Instant.fromEpochMilliseconds(millis)
+        .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault())
+    val hour12 = if (dateTime.hour % 12 == 0) 12 else dateTime.hour % 12
+    val minute = dateTime.minute.toString().padStart(2, '0')
+    return "${dateTime.date.toDisplayString()}, $hour12:$minute ${if (dateTime.hour < 12) "AM" else "PM"}"
 }

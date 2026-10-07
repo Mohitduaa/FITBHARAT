@@ -3,7 +3,7 @@ package com.example
 import android.app.Application
 import com.example.platform.AndroidPlatformServices
 
-class FitBharatApplication : Application() {
+class FitBharatApplication : Application(), com.example.platform.AppContainerHolder {
     val platform: AndroidPlatformServices by lazy {
         AndroidPlatformServices(this, geminiApiKey = BuildConfig.GEMINI_API_KEY)
     }
@@ -15,5 +15,5 @@ class FitBharatApplication : Application() {
     }
 
     /** One container (and therefore one database) per process, shared by every Activity instance. */
-    val container: AppContainer by lazy { AppContainer(platform) }
+    override val container: AppContainer by lazy { AppContainer(platform) }
 }

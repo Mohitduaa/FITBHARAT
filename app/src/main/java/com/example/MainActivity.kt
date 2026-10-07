@@ -17,6 +17,11 @@ class MainActivity : ComponentActivity() {
             app.platform.stepTracker.refresh()
         }
 
+    private val backupFolderLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            app.platform.autoBackup.onFolderPicked(uri)
+        }
+
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -31,12 +36,14 @@ class MainActivity : ComponentActivity() {
                 activityPermissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
             }
         }
+        app.platform.autoBackup.folderPicker = { backupFolderLauncher.launch(null) }
         setContent { FitBharatRoot(app.container) }
     }
 
     override fun onStart() {
         super.onStart()
         app.platform.stepTracker.refresh()
+        app.platform.autoBackup.backupIfDue()
     }
 
     override fun onStop() {

@@ -22,6 +22,8 @@ class AndroidPlatformServices(
 
     override val reminders = AndroidReminderScheduler(appContext)
 
+    override val autoBackup = AndroidAutoBackup(appContext)
+
     override fun databaseBuilder(): RoomDatabase.Builder<AppDatabase> =
         Room.databaseBuilder<AppDatabase>(context = appContext, name = DATABASE_NAME)
 

@@ -27,6 +27,9 @@ targets:
         # Compose Multiplatform crashes on 120 Hz iPhones at launch without this key.
         CADisableMinimumFrameDurationOnPhone: true
         UIRequiresFullScreen: true
+        # Shows Documents (the daily backups) in the Files app under "On My iPhone".
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSCameraUsageDescription: FitBharat uses the camera to scan your meals and take your profile picture.
