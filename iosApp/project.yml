@@ -24,6 +24,8 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # Compose Multiplatform crashes on 120 Hz iPhones at launch without this key.
+        CADisableMinimumFrameDurationOnPhone: true
         UIRequiresFullScreen: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

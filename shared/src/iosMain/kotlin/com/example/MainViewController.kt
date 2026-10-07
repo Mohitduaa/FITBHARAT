@@ -1,6 +1,10 @@
 package com.example
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -17,10 +21,23 @@ private val container: AppContainer by lazy {
 }
 
 /** Entry point called from the SwiftUI shell in iosApp. */
-fun MainViewController(): UIViewController = ComposeUIViewController {
-    val steps = container.platform.stepTracker
-    LaunchedEffect(Unit) { steps.refresh() }
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { steps.refresh() }
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) { steps.stop() }
-    FitBharatRoot(container)
+fun MainViewController(): UIViewController {
+    installCrashLogger()
+    val previousCrash = readCrashReport()
+    return ComposeUIViewController {
+        var crash by remember { mutableStateOf(previousCrash) }
+        val report = crash
+        if (report != null) {
+            CrashReportScreen(report) {
+                clearCrashReport()
+                crash = null
+            }
+        } else {
+            val steps = container.platform.stepTracker
+            LaunchedEffect(Unit) { steps.refresh() }
+            LifecycleEventEffect(Lifecycle.Event.ON_START) { steps.refresh() }
+            LifecycleEventEffect(Lifecycle.Event.ON_STOP) { steps.stop() }
+            FitBharatRoot(container)
+        }
+    }
 }
