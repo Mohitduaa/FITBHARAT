@@ -6,10 +6,16 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Typeface
 import android.widget.RemoteViews
 import com.example.FitBharatApplication
 import com.example.MainActivity
 import com.example.R
+import com.example.data.model.nutritionPlan
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlinx.coroutines.CoroutineScope
@@ -53,10 +59,14 @@ object TodayWidget {
         val app = context.applicationContext as FitBharatApplication
         val repository = app.container.repository
         val profile = repository.userProfile.first()
-        val eaten = repository.getMealsForToday().first().sumOf { it.calories }
-        val steps = repository.getTodayLog().first().steps
+        val log = repository.getTodayLog().first()
+        val steps = log.steps
+        val meals = repository.getMealsForToday().first()
+        val eaten = meals.sumOf { it.calories }
 
         val left = profile.calorieTarget - eaten
+        val protein = meals.sumOf { it.proteinG }
+        val plan = profile.nutritionPlan()
         val open = PendingIntent.getActivity(
             context,
             0,
@@ -64,21 +74,58 @@ object TodayWidget {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
         val views = RemoteViews(context.packageName, R.layout.widget_today).apply {
-            setTextViewText(R.id.widget_left_value, "%,d".format(abs(left)))
-            setTextViewText(R.id.widget_left_label, if (left >= 0) "kcal left today" else "kcal over target")
-            setProgressBar(
-                R.id.widget_cal_progress, 100,
-                (eaten * 100 / profile.calorieTarget.coerceAtLeast(1)).coerceIn(0, 100), false
+            setImageViewBitmap(
+                R.id.widget_ring,
+                calorieRing(
+                    progress = eaten.toFloat() / profile.calorieTarget.coerceAtLeast(1),
+                    value = "%,d".format(abs(left)),
+                    label = if (left >= 0) "kcal left" else "kcal over"
+                )
             )
-            setTextViewText(R.id.widget_steps_value, "%,d".format(steps))
-            setTextViewText(R.id.widget_steps_label, "of %,d steps".format(profile.stepGoal))
-            setProgressBar(
-                R.id.widget_steps_progress, 100,
-                (steps * 100 / profile.stepGoal.coerceAtLeast(1)).coerceIn(0, 100), false
-            )
+            setTextViewText(R.id.widget_steps_value, "%,d / %,d".format(steps, profile.stepGoal))
+            setProgressBar(R.id.widget_steps_progress, 100, percent(steps.toDouble(), profile.stepGoal.toDouble()), false)
+            setTextViewText(R.id.widget_water_value, "%.1f / %.1f L".format(log.waterMl / 1000.0, profile.waterGoalMl / 1000.0))
+            setProgressBar(R.id.widget_water_progress, 100, percent(log.waterMl.toDouble(), profile.waterGoalMl.toDouble()), false)
+            setTextViewText(R.id.widget_protein_value, "%d / %d g".format(protein.toInt(), plan.proteinG))
+            setProgressBar(R.id.widget_protein_progress, 100, percent(protein, plan.proteinG.toDouble()), false)
             setOnClickPendingIntent(R.id.widget_root, open)
         }
         ids.forEach { manager.updateAppWidget(it, views) }
+    }
+
+    private fun percent(value: Double, goal: Double): Int = (value * 100 / goal.coerceAtLeast(1.0)).toInt().coerceIn(0, 100)
+
+    /** A donut for today's calories with the number left in the middle (RemoteViews cannot draw custom shapes). */
+    private fun calorieRing(progress: Float, value: String, label: String): Bitmap {
+        val size = 360
+        val stroke = 36f
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val inset = stroke / 2 + 6f
+        val rect = RectF(inset, inset, size - inset, size - inset)
+        val over = progress > 1.05f
+        val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = stroke
+            strokeCap = Paint.Cap.ROUND
+            color = 0xFF45413A.toInt()
+        }
+        canvas.drawArc(rect, -90f, 360f, false, ring)
+        ring.color = if (over) 0xFFE5655B.toInt() else 0xFFEE8A47.toInt()
+        if (progress > 0f) canvas.drawArc(rect, -90f, 360f * progress.coerceIn(0.02f, 1f), false, ring)
+
+        val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textAlign = Paint.Align.CENTER
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            color = 0xFFF5F1EA.toInt()
+            textSize = if (value.length >= 5) 76f else 92f
+        }
+        canvas.drawText(value, size / 2f, size / 2f + 14f, text)
+        text.typeface = Typeface.DEFAULT
+        text.color = 0xFFB1ACA0.toInt()
+        text.textSize = 34f
+        canvas.drawText(label, size / 2f, size / 2f + 62f, text)
+        return bitmap
     }
 
     fun refreshAsync(context: Context) {

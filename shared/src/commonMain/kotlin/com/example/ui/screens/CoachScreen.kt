@@ -1,5 +1,11 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.material.icons.filled.KeyboardHide
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +67,11 @@ fun CoachScreen(
 ) {
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    // iOS keyboards have no "hide" key, so tapping or dragging the chat (or the button) puts it away.
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    var inputFocused by remember { mutableStateOf(false) }
+    val chatDragged by listState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(chatDragged) { if (chatDragged) focusManager.clearFocus() }
 
     LaunchedEffect(messages.size, isTyping) {
         if (messages.isNotEmpty()) {
@@ -133,7 +144,8 @@ fun CoachScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .pointerInput(Unit) { detectTapGestures { focusManager.clearFocus() } },
             verticalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(bottom = 12.dp)
         ) {
@@ -183,6 +195,7 @@ fun CoachScreen(
                     shape = RoundedCornerShape(24.dp),
                     modifier = Modifier
                         .weight(1f)
+                        .onFocusChanged { inputFocused = it.isFocused }
                         .testTag("coach_input_field"),
                     maxLines = 3,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -193,6 +206,18 @@ fun CoachScreen(
                         }
                     })
                 )
+                if (inputFocused) {
+                    IconButton(
+                        onClick = { focusManager.clearFocus() },
+                        modifier = Modifier.size(40.dp).testTag("hide_keyboard_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardHide,
+                            contentDescription = "Hide keyboard",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
                     onClick = {

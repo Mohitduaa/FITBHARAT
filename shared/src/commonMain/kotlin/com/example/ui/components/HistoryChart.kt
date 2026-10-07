@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -106,13 +107,15 @@ fun HistoryChartCard(
     val tracked = values.filter { it > 0 }
     val average = if (tracked.isEmpty()) 0 else tracked.sum() / tracked.size
     val daysAtGoal = when (metric) {
-        Metric.CALORIES -> values.count { it > 0 && it <= goal * 1.1f }
+        // "On target" means eating roughly what the plan asks for, not just staying under it.
+        Metric.CALORIES -> values.count { it >= goal * 0.8f && it <= goal * 1.1f }
         else -> values.count { it >= goal }
     }
     val scaleMax = maxOf(goal * 1.3f, (values.maxOrNull() ?: 0) * 1.1f, 1f)
 
     val primary = MaterialTheme.colorScheme.primary
-    val over = MaterialTheme.colorScheme.secondaryContainer
+    // Not secondaryContainer: that is near-black and disappears on the dark theme.
+    val over = MaterialTheme.colorScheme.error
     val track = MaterialTheme.colorScheme.surfaceVariant
     val goalLine = MaterialTheme.colorScheme.onSurfaceVariant
     val water = if (isSystemInDarkTheme()) WaterBlueDark else WaterBlue
@@ -248,7 +251,8 @@ fun HistoryChartCard(
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         softWrap = false,
-                        modifier = Modifier.weight(1f)
+                        // A 30-day slot is narrower than a two-digit date, so let the label spill over evenly.
+                        modifier = Modifier.weight(1f).wrapContentWidth(unbounded = true)
                     )
                 }
             }
