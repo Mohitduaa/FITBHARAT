@@ -8,7 +8,6 @@ import androidx.room.migration.Migration
 import androidx.sqlite.SQLiteConnection
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
-import kotlinx.coroutines.Dispatchers
 
 const val DATABASE_NAME = "losemate_fitdesi.db"
 
@@ -84,5 +83,5 @@ private val MIGRATION_4_5 = object : Migration(4, 5) {
 fun RoomDatabase.Builder<AppDatabase>.configure(): AppDatabase =
     addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
         .setDriver(BundledSQLiteDriver())
-        .setQueryCoroutineContext(Dispatchers.IO)
+        .setQueryCoroutineContext(databaseDispatcher())
         .build()

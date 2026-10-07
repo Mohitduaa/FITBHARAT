@@ -53,8 +53,8 @@ class IosReminderScheduler : ReminderScheduler {
             setSound(UNNotificationSound.defaultSound)
         }
         val time = NSDateComponents().apply {
-            setHour((minutesAfterMidnight / 60).toLong())
-            setMinute((minutesAfterMidnight % 60).toLong())
+            hour = (minutesAfterMidnight / 60).toLong()
+            minute = (minutesAfterMidnight % 60).toLong()
         }
         val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(time, repeats = true)
         val request = UNNotificationRequest.requestWithIdentifier(id, content = content, trigger = trigger)

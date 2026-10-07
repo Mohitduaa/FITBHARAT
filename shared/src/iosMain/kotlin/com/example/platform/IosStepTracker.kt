@@ -7,8 +7,6 @@ import com.example.util.todayDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import platform.CoreMotion.CMAuthorizationStatusAuthorized
-import platform.CoreMotion.CMAuthorizationStatusNotDetermined
 import platform.CoreMotion.CMPedometer
 import platform.Foundation.NSCalendar
 import platform.Foundation.NSDate
@@ -32,24 +30,20 @@ class IosStepTracker : StepTracker {
 
     private fun startOfToday(): NSDate = NSCalendar.currentCalendar.startOfDayForDate(NSDate())
 
-    private fun currentMode(): StepTrackingMode {
-        if (!CMPedometer.isStepCountingAvailable()) return StepTrackingMode.MANUAL
-        return when (CMPedometer.authorizationStatus()) {
-            CMAuthorizationStatusAuthorized -> StepTrackingMode.AUTO
-            CMAuthorizationStatusNotDetermined -> StepTrackingMode.NEEDS_PERMISSION
-            else -> StepTrackingMode.MANUAL // denied or restricted
+    /**
+     * iOS shows its motion-permission prompt by itself the first time updates start, so there is no separate
+     * permission state to track. If the user declines, no data arrives and the steps card can still be edited.
+     */
+    override fun refresh() {
+        if (CMPedometer.isStepCountingAvailable()) {
+            _mode.value = StepTrackingMode.AUTO
+            start()
+        } else {
+            _mode.value = StepTrackingMode.MANUAL
         }
     }
 
-    override fun refresh() {
-        _mode.value = currentMode()
-        if (_mode.value == StepTrackingMode.AUTO) start()
-    }
-
-    /** A first query makes iOS show its motion-permission prompt; refresh again once it is answered. */
-    override fun requestPermission() {
-        pedometer.queryPedometerDataFromDate(startOfToday(), toDate = NSDate()) { _, _ -> refresh() }
-    }
+    override fun requestPermission() = refresh()
 
     override fun stop() {
         if (running) pedometer.stopPedometerUpdates()

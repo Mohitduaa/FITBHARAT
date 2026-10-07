@@ -30,8 +30,6 @@ import platform.UIKit.UIImagePickerController
 import platform.UIKit.UIImagePickerControllerDelegateProtocol
 import platform.UIKit.UIImagePickerControllerOriginalImage
 import platform.UIKit.UIImagePickerControllerSourceType
-import platform.UIKit.UIImagePickerControllerSourceTypeCamera
-import platform.UIKit.UIImagePickerControllerSourceTypePhotoLibrary
 import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UIViewController
 import platform.UIKit.UIDocumentPickerDelegateProtocol
@@ -100,9 +98,9 @@ private class IosPhotoPicker(
     // The picker only holds its delegate weakly, so keep it alive here.
     private var delegate: PhotoDelegate? = null
 
-    override fun takePhoto() = present(UIImagePickerControllerSourceTypeCamera, "The camera is not available on this device.")
+    override fun takePhoto() = present(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera, "The camera is not available on this device.")
 
-    override fun pickFromGallery() = present(UIImagePickerControllerSourceTypePhotoLibrary, "The photo library is not available.")
+    override fun pickFromGallery() = present(UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypePhotoLibrary, "The photo library is not available.")
 
     private fun present(source: UIImagePickerControllerSourceType, unavailableMessage: String) {
         if (!UIImagePickerController.isSourceTypeAvailable(source)) {

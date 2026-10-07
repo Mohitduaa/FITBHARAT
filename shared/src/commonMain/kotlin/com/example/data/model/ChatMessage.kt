@@ -1,10 +1,13 @@
 package com.example.data.model
 
+import com.example.util.currentTimeMillis
+import kotlin.random.Random
+
 data class ChatMessage(
-    val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String = "${currentTimeMillis()}-${Random.nextLong().toULong().toString(16)}",
     val text: String,
     val isUser: Boolean,
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = currentTimeMillis(),
     val suggestions: List<String> = emptyList()
 )
 
