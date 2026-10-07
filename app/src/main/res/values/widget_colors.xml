@@ -6,4 +6,10 @@
     <color name="widget_accent">#FFEE8A47</color>
     <color name="widget_blue">#FF5A9FD4</color>
     <color name="widget_violet">#FF9C8BD6</color>
+    <color name="widget_light_text">#FF1F1E1B</color>
+    <color name="widget_light_text_secondary">#FF6B6860</color>
+    <color name="widget_light_track">#FFECE6DC</color>
+    <color name="widget_light_accent">#FFD9622B</color>
+    <color name="widget_light_blue">#FF3F7CA8</color>
+    <color name="widget_light_violet">#FF7E6BC4</color>
 </resources>

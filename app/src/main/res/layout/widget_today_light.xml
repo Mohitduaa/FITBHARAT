@@ -3,7 +3,7 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
+    android:background="@drawable/widget_background_light"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="12dp"
@@ -37,7 +37,7 @@
                 android:layout_weight="1"
                 android:id="@+id/widget_row1_label"
                 android:text="Steps"
-                android:textColor="@color/widget_text_secondary"
+                android:textColor="@color/widget_light_text_secondary"
                 android:textSize="11sp" />
 
             <TextView
@@ -45,7 +45,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0 / 7,500"
-                android:textColor="@color/widget_text"
+                android:textColor="@color/widget_light_text"
                 android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -58,7 +58,7 @@
             android:layout_marginTop="3dp"
             android:max="100"
             android:progress="40"
-            android:progressDrawable="@drawable/widget_progress_orange" />
+            android:progressDrawable="@drawable/widget_light_progress_orange" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -72,7 +72,7 @@
                 android:layout_weight="1"
                 android:id="@+id/widget_row2_label"
                 android:text="Water"
-                android:textColor="@color/widget_text_secondary"
+                android:textColor="@color/widget_light_text_secondary"
                 android:textSize="11sp" />
 
             <TextView
@@ -80,7 +80,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0.0 / 3.3 L"
-                android:textColor="@color/widget_text"
+                android:textColor="@color/widget_light_text"
                 android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -93,7 +93,7 @@
             android:layout_marginTop="3dp"
             android:max="100"
             android:progress="30"
-            android:progressDrawable="@drawable/widget_progress_blue" />
+            android:progressDrawable="@drawable/widget_light_progress_blue" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -107,7 +107,7 @@
                 android:layout_weight="1"
                 android:id="@+id/widget_row3_label"
                 android:text="Protein"
-                android:textColor="@color/widget_text_secondary"
+                android:textColor="@color/widget_light_text_secondary"
                 android:textSize="11sp" />
 
             <TextView
@@ -115,7 +115,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="0 / 120 g"
-                android:textColor="@color/widget_text"
+                android:textColor="@color/widget_light_text"
                 android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
@@ -128,6 +128,6 @@
             android:layout_marginTop="3dp"
             android:max="100"
             android:progress="25"
-            android:progressDrawable="@drawable/widget_progress_violet" />
+            android:progressDrawable="@drawable/widget_light_progress_violet" />
     </LinearLayout>
 </LinearLayout>

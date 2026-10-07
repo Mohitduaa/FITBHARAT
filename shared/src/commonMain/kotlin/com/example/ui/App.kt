@@ -78,7 +78,14 @@ fun FitBharatRoot(container: AppContainer) {
     val viewModel: MainViewModel = viewModel(
         factory = viewModelFactory { initializer { MainViewModel(container) } }
     )
-    FitBharatTheme {
+    val profile by viewModel.userProfile.collectAsStateWithLifecycle()
+    val dark = when (profile.themeMode) {
+        "LIGHT" -> false
+        "DARK" -> true
+        else -> androidx.compose.foundation.isSystemInDarkTheme()
+    }
+    com.example.platform.SystemBarsAppearance(darkTheme = dark)
+    FitBharatTheme(darkTheme = dark) {
         FitBharatApp(viewModel = viewModel)
     }
 }

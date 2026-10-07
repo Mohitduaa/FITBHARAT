@@ -36,6 +36,10 @@ expect fun rememberPhotoPicker(
     maxDimension: Int = 1280
 ): PhotoPicker
 
+/** Keeps the status / navigation bar icons readable when the app theme differs from the system one. */
+@Composable
+expect fun SystemBarsAppearance(darkTheme: Boolean)
+
 /** Platform back-button / swipe-back handling. */
 @Composable
 expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)

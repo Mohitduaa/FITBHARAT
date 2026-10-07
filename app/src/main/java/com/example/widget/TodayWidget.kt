@@ -15,6 +15,8 @@ import android.widget.RemoteViews
 import com.example.FitBharatApplication
 import com.example.MainActivity
 import com.example.R
+import com.example.data.model.WidgetConfig
+import com.example.data.model.WidgetMetric
 import com.example.data.model.nutritionPlan
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
@@ -65,29 +67,68 @@ object TodayWidget {
         val eaten = meals.sumOf { it.calories }
 
         val left = profile.calorieTarget - eaten
-        val protein = meals.sumOf { it.proteinG }
         val plan = profile.nutritionPlan()
+        val config = WidgetConfig.fromJson(profile.widgetConfig)
+        val burnTarget = when (profile.goalType) {
+            "GAIN" -> 200
+            "MAINTAIN" -> 300
+            else -> 400
+        }
+
+        /** Label, value text and progress for one bar. */
+        fun row(metric: WidgetMetric): Triple<String, String, Int> = when (metric) {
+            WidgetMetric.STEPS -> Triple("Steps", "%,d / %,d".format(steps, profile.stepGoal), percent(steps.toDouble(), profile.stepGoal.toDouble()))
+            WidgetMetric.WATER -> Triple(
+                "Water", "%.1f / %.1f L".format(log.waterMl / 1000.0, profile.waterGoalMl / 1000.0),
+                percent(log.waterMl.toDouble(), profile.waterGoalMl.toDouble())
+            )
+            WidgetMetric.PROTEIN -> meals.sumOf { it.proteinG }.let {
+                Triple("Protein", "%d / %d g".format(it.toInt(), plan.proteinG), percent(it, plan.proteinG.toDouble()))
+            }
+            WidgetMetric.BURNED -> Triple(
+                "Burned", "%d / %d kcal".format(log.caloriesBurned, burnTarget),
+                percent(log.caloriesBurned.toDouble(), burnTarget.toDouble())
+            )
+            WidgetMetric.CARBS -> meals.sumOf { it.carbsG }.let {
+                Triple("Carbs", "%d / %d g".format(it.toInt(), plan.carbsG), percent(it, plan.carbsG.toDouble()))
+            }
+            WidgetMetric.FAT -> meals.sumOf { it.fatG }.let {
+                Triple("Fat", "%d / %d g".format(it.toInt(), plan.fatG), percent(it, plan.fatG.toDouble()))
+            }
+        }
+
         val open = PendingIntent.getActivity(
             context,
             0,
             Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val views = RemoteViews(context.packageName, R.layout.widget_today).apply {
+        val layout = if (config.isLight) R.layout.widget_today_light else R.layout.widget_today
+        val views = RemoteViews(context.packageName, layout).apply {
             setImageViewBitmap(
                 R.id.widget_ring,
                 calorieRing(
                     progress = eaten.toFloat() / profile.calorieTarget.coerceAtLeast(1),
-                    value = "%,d".format(abs(left)),
-                    label = if (left >= 0) "kcal left" else "kcal over"
+                    value = "%,d".format(if (config.showsEaten) eaten else abs(left)),
+                    label = when {
+                        config.showsEaten -> "kcal eaten"
+                        left >= 0 -> "kcal left"
+                        else -> "kcal over"
+                    },
+                    light = config.isLight
                 )
             )
-            setTextViewText(R.id.widget_steps_value, "%,d / %,d".format(steps, profile.stepGoal))
-            setProgressBar(R.id.widget_steps_progress, 100, percent(steps.toDouble(), profile.stepGoal.toDouble()), false)
-            setTextViewText(R.id.widget_water_value, "%.1f / %.1f L".format(log.waterMl / 1000.0, profile.waterGoalMl / 1000.0))
-            setProgressBar(R.id.widget_water_progress, 100, percent(log.waterMl.toDouble(), profile.waterGoalMl.toDouble()), false)
-            setTextViewText(R.id.widget_protein_value, "%d / %d g".format(protein.toInt(), plan.proteinG))
-            setProgressBar(R.id.widget_protein_progress, 100, percent(protein, plan.proteinG.toDouble()), false)
+            val ids = listOf(
+                Triple(R.id.widget_row1_label, R.id.widget_row1_value, R.id.widget_row1_progress),
+                Triple(R.id.widget_row2_label, R.id.widget_row2_value, R.id.widget_row2_progress),
+                Triple(R.id.widget_row3_label, R.id.widget_row3_value, R.id.widget_row3_progress)
+            )
+            config.metrics.zip(ids).forEach { (metric, viewIds) ->
+                val (label, value, progress) = row(metric)
+                setTextViewText(viewIds.first, label)
+                setTextViewText(viewIds.second, value)
+                setProgressBar(viewIds.third, 100, progress, false)
+            }
             setOnClickPendingIntent(R.id.widget_root, open)
         }
         ids.forEach { manager.updateAppWidget(it, views) }
@@ -96,7 +137,7 @@ object TodayWidget {
     private fun percent(value: Double, goal: Double): Int = (value * 100 / goal.coerceAtLeast(1.0)).toInt().coerceIn(0, 100)
 
     /** A donut for today's calories with the number left in the middle (RemoteViews cannot draw custom shapes). */
-    private fun calorieRing(progress: Float, value: String, label: String): Bitmap {
+    private fun calorieRing(progress: Float, value: String, label: String, light: Boolean): Bitmap {
         val size = 360
         val stroke = 36f
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -108,21 +149,25 @@ object TodayWidget {
             style = Paint.Style.STROKE
             strokeWidth = stroke
             strokeCap = Paint.Cap.ROUND
-            color = 0xFF45413A.toInt()
+            color = if (light) 0xFFECE6DC.toInt() else 0xFF45413A.toInt()
         }
         canvas.drawArc(rect, -90f, 360f, false, ring)
-        ring.color = if (over) 0xFFE5655B.toInt() else 0xFFEE8A47.toInt()
+        ring.color = when {
+            over -> 0xFFE5655B.toInt()
+            light -> 0xFFD9622B.toInt()
+            else -> 0xFFEE8A47.toInt()
+        }
         if (progress > 0f) canvas.drawArc(rect, -90f, 360f * progress.coerceIn(0.02f, 1f), false, ring)
 
         val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textAlign = Paint.Align.CENTER
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            color = 0xFFF5F1EA.toInt()
+            color = if (light) 0xFF1F1E1B.toInt() else 0xFFF5F1EA.toInt()
             textSize = if (value.length >= 5) 76f else 92f
         }
         canvas.drawText(value, size / 2f, size / 2f + 14f, text)
         text.typeface = Typeface.DEFAULT
-        text.color = 0xFFB1ACA0.toInt()
+        text.color = if (light) 0xFF6B6860.toInt() else 0xFFB1ACA0.toInt()
         text.textSize = 34f
         canvas.drawText(label, size / 2f, size / 2f + 62f, text)
         return bitmap

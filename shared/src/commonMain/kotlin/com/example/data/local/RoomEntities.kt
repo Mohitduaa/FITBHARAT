@@ -75,7 +75,11 @@ data class UserProfileEntity(
     @ColumnInfo(defaultValue = "0") val remindMeals: Boolean = false,
     @ColumnInfo(defaultValue = "0") val remindWalk: Boolean = false,
     /** JSON of [com.example.data.model.ReminderTimes]; empty means the defaults. */
-    @ColumnInfo(defaultValue = "") val reminderTimes: String = ""
+    @ColumnInfo(defaultValue = "") val reminderTimes: String = "",
+    /** JSON of [com.example.data.model.WidgetConfig]; empty means the defaults. */
+    @ColumnInfo(defaultValue = "") val widgetConfig: String = "",
+    /** App theme: "SYSTEM", "LIGHT" or "DARK". */
+    @ColumnInfo(defaultValue = "SYSTEM") val themeMode: String = "SYSTEM"
 )
 
 @Serializable

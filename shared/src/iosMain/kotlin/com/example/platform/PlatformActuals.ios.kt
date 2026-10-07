@@ -129,6 +129,12 @@ actual fun rememberPhotoPicker(
     }
 }
 
+// ---------------------------------------------------------------- system bars
+
+/** iOS picks the status bar style from the content; nothing to wire for now. */
+@Composable
+actual fun SystemBarsAppearance(darkTheme: Boolean) = Unit
+
 // ---------------------------------------------------------------- back handling
 
 /** iOS already has the edge-swipe back gesture handled by the system; nothing extra to wire. */

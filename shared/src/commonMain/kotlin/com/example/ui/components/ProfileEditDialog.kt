@@ -24,6 +24,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -92,6 +95,8 @@ fun ProfileEditDialog(
     var remindMeals by remember { mutableStateOf(profile.remindMeals) }
     var remindWalk by remember { mutableStateOf(profile.remindWalk) }
     var reminderTimes by remember { mutableStateOf(com.example.data.model.ReminderTimes.fromJson(profile.reminderTimes)) }
+    var themeMode by remember { mutableStateOf(profile.themeMode) }
+    var widgetConfig by remember { mutableStateOf(com.example.data.model.WidgetConfig.fromJson(profile.widgetConfig)) }
     var ageText by remember { mutableStateOf(if (isFirstSetup) "" else profile.age.toString()) }
     var heightText by remember { mutableStateOf(if (isFirstSetup) "" else profile.heightCm.toInt().toString()) }
     var currentText by remember { mutableStateOf(if (isFirstSetup) "" else formatKg(profile.currentWeightKg)) }
@@ -140,7 +145,9 @@ fun ProfileEditDialog(
             remindWater = remindWater,
             remindMeals = remindMeals,
             remindWalk = remindWalk,
-            reminderTimes = reminderTimes.toJson()
+            reminderTimes = reminderTimes.toJson(),
+            widgetConfig = widgetConfig.toJson(),
+            themeMode = themeMode
         )
     } else {
         null
@@ -410,6 +417,14 @@ fun ProfileEditDialog(
                         }
                     }
 
+                    Section("Appearance") {
+                        ThemeModeToggle(themeMode) { themeMode = it }
+                    }
+
+                    Section("Home screen widget") {
+                        WidgetSettings(widgetConfig) { widgetConfig = it }
+                    }
+
                     // Backup & restore
                     Section(if (isFirstSetup) "Already use FitBharat?" else "Backup & restore") {
                         Text(
@@ -673,5 +688,28 @@ private fun TimeChip(label: String, minutes: Int, onChange: (Int) -> Unit) {
             },
             dismissButton = { androidx.compose.material3.TextButton(onClick = { open = false }) { Text("Cancel") } }
         )
+    }
+}
+
+
+/** System / Light / Dark as one segmented toggle with icons. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ThemeModeToggle(mode: String, onChange: (String) -> Unit) {
+    val options = listOf(
+        Triple("SYSTEM", "System", Icons.Default.BrightnessAuto),
+        Triple("LIGHT", "Light", Icons.Default.LightMode),
+        Triple("DARK", "Dark", Icons.Default.DarkMode)
+    )
+    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+        options.forEachIndexed { index, (key, label, icon) ->
+            SegmentedButton(
+                selected = mode == key,
+                onClick = { onChange(key) },
+                shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                icon = { androidx.compose.material3.Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.testTag("theme_${key.lowercase()}")
+            ) { Text(label, fontSize = 13.sp) }
+        }
     }
 }
