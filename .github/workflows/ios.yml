@@ -56,6 +56,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           set -o pipefail
+          mkdir -p build
           xcodebuild \
             -project iosApp/FitBharat.xcodeproj \
             -scheme FitBharat \
