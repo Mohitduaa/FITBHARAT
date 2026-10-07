@@ -77,7 +77,7 @@ sealed interface AiScanUiState {
 }
 
 class MainViewModel(private val container: AppContainer) : ViewModel() {
-    private val repository = FitnessRepository(container.database.appDao())
+    private val repository = container.repository
     private val geminiService = GeminiService(container.platform)
 
     private val backupManager = BackupManager(container.database.appDao())

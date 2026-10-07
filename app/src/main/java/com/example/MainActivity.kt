@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         app.platform.stepTracker.stop()
+        com.example.widget.TodayWidget.refreshAsync(this)
     }
 
     override fun onDestroy() {

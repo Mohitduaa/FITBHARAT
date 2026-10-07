@@ -6,4 +6,5 @@
     <string name="nav_workouts">Workouts</string>
     <string name="nav_progress">Progress</string>
     <string name="nav_coach">Coach</string>
+    <string name="widget_description">Calories left and steps for today</string>
 </resources>
