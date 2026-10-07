@@ -56,7 +56,12 @@ class GeminiService(private val platform: PlatformServices) {
     private val json = Json { ignoreUnknownKeys = true }
 
     private val apiKey: String?
-        get() = platform.geminiApiKey?.takeUnless { it.isBlank() || it == "MY_GEMINI_API_KEY" }
+        // A pasted key often carries a trailing newline, spaces or quotes, which are illegal in an HTTP header.
+        get() = platform.geminiApiKey
+            ?.trim()
+            ?.trim('"', '\'')
+            ?.filterNot { it.isWhitespace() }
+            ?.takeUnless { it.isBlank() || it == "MY_GEMINI_API_KEY" }
 
     /** False when the build has no Gemini key, so the coach can only give offline tips. */
     val isConfigured: Boolean get() = apiKey != null
