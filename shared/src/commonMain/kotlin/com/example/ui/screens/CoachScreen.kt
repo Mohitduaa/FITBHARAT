@@ -63,7 +63,8 @@ fun CoachScreen(
     messages: List<ChatMessage>,
     isTyping: Boolean,
     onSendMessage: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    aiConfigured: Boolean = true
 ) {
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -114,9 +115,11 @@ fun CoachScreen(
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    text = "Personal nutrition & habit guidance",
+                    text = if (aiConfigured) "AI on · personal nutrition & habit guidance"
+                    else "AI key missing · offline tips only",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (aiConfigured) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testTag("coach_ai_status")
                 )
             }
         }

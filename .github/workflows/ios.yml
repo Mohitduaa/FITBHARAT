@@ -68,6 +68,15 @@ jobs:
             GEMINI_API_KEY="${GEMINI_API_KEY:-MY_GEMINI_API_KEY}" \
             2>&1 | tee build/xcodebuild.log
 
+      # Prints only whether the key is there and its length, never the key itself.
+      - name: Check Gemini key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then echo "Secret GEMINI_API_KEY: present (${#GEMINI_API_KEY} chars)"; else echo "::warning::Secret GEMINI_API_KEY is empty or missing - the coach will use offline tips"; fi
+          IN_APP=$(/usr/libexec/PlistBuddy -c "Print :GEMINI_API_KEY" build/ios/Build/Products/Release-iphoneos/FitBharat.app/Info.plist 2>/dev/null || true)
+          if [ "$IN_APP" = "$GEMINI_API_KEY" ] && [ -n "$IN_APP" ]; then echo "Info.plist key: matches the secret"; else echo "::warning::Info.plist key does not match the secret (length ${#IN_APP})"; fi
+
       - name: Package IPA
         run: |
           APP=build/ios/Build/Products/Release-iphoneos/FitBharat.app

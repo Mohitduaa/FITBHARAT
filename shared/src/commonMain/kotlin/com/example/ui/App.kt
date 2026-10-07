@@ -231,7 +231,8 @@ fun FitBharatApp(viewModel: MainViewModel) {
                     CoachScreen(
                         messages = chatMessages,
                         isTyping = isCoachTyping,
-                        onSendMessage = { viewModel.sendChatMessage(it) }
+                        onSendMessage = { viewModel.sendChatMessage(it) },
+                        aiConfigured = viewModel.aiConfigured
                     )
                 }
             }

@@ -80,6 +80,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     private val repository = container.repository
     private val geminiService = GeminiService(container.platform)
 
+    /** Whether this build can reach Gemini; shown on the coach screen. */
+    val aiConfigured: Boolean get() = geminiService.isConfigured
+
     private val backupManager = BackupManager(container.database.appDao())
 
     private val _backupMessage = MutableStateFlow<String?>(null)

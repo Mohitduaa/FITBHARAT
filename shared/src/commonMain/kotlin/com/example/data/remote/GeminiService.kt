@@ -58,6 +58,9 @@ class GeminiService(private val platform: PlatformServices) {
     private val apiKey: String?
         get() = platform.geminiApiKey?.takeUnless { it.isBlank() || it == "MY_GEMINI_API_KEY" }
 
+    /** False when the build has no Gemini key, so the coach can only give offline tips. */
+    val isConfigured: Boolean get() = apiKey != null
+
     suspend fun analyzeFoodImage(jpeg: ByteArray, profile: UserProfileEntity): AiFoodScanResult =
         withContext(Dispatchers.Default) {
             if (apiKey == null) throw FoodScanException("AI scan abhi set up nahi hai. Khana khud add karein.")
@@ -187,7 +190,12 @@ class GeminiService(private val platform: PlatformServices) {
             throw e
         } catch (e: Exception) {
             platform.logError(TAG, "Coach chat failed", e)
-            "Coach abhi connect nahi ho pa raha — internet check karke dobara poochiye. Tab tak ek tip:\n\n" +
+            // The short reason helps tell a bad key (HTTP 400/403) from a network problem.
+            val reason = when (e) {
+                is GeminiHttpException -> "AI error ${e.code}"
+                else -> e::class.simpleName ?: "network error"
+            }
+            "Coach abhi connect nahi ho pa raha ($reason) — internet check karke dobara poochiye. Tab tak ek tip:\n\n" +
                 getOfflineCoachResponse(userPrompt, profile)
         }
     }
