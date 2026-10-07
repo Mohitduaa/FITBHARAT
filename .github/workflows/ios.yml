@@ -1,0 +1,82 @@
+name: iOS unsigned IPA
+
+# Builds the shared Kotlin framework and the iOS app on a GitHub macOS runner and uploads an unsigned
+# FitBharat-unsigned.ipa. Install it on an iPhone with AltStore / Sideloadly, which sign it with your Apple ID.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # The Gradle build also configures the Android modules, so an Android SDK must exist.
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      # The Android module reads this file at configuration time; the real key is optional.
+      - name: Create .env
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then GEMINI_API_KEY="MY_GEMINI_API_KEY"; fi
+          echo "GEMINI_API_KEY=$GEMINI_API_KEY" > .env
+
+      - name: Generate Xcode project
+        working-directory: iosApp
+        run: xcodegen generate
+
+      - name: Build app (unsigned)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project iosApp/FitBharat.xcodeproj \
+            -scheme FitBharat \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            GEMINI_API_KEY="${GEMINI_API_KEY:-MY_GEMINI_API_KEY}" \
+            2>&1 | tee build/xcodebuild.log
+
+      - name: Package IPA
+        run: |
+          APP=build/ios/Build/Products/Release-iphoneos/FitBharat.app
+          mkdir -p ipa/Payload
+          cp -R "$APP" ipa/Payload/
+          (cd ipa && zip -qry ../FitBharat-unsigned.ipa Payload)
+          ls -lh FitBharat-unsigned.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FitBharat-unsigned-ipa
+          path: FitBharat-unsigned.ipa
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-log
+          path: build/xcodebuild.log
+          if-no-files-found: ignore

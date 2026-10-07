@@ -1,0 +1,104 @@
+// Builds the exercise library for the workout program from the public-domain free-exercise-db
+// (https://github.com/yuhonas/free-exercise-db, Unlicense): downloads the two photos of every
+// exercise into the app's compose resources and generates ExerciseLibrary.kt.
+//
+// Usage: node scripts/build_exercise_library.mjs <path-to-dist/exercises.json>
+import fs from 'node:fs';
+import path from 'node:path';
+
+const dbPath = process.argv[2];
+if (!dbPath) throw new Error('pass the path to exercises.json');
+const db = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+const byId = new Map(db.map((e) => [e.id, e]));
+
+// kind: how the "reps" line reads (strength / hold / cardio / stretch)
+const GROUPS = {
+  CHEST: ['Pushups', 'Push-Up_Wide', 'Incline_Push-Up', 'Incline_Push-Up_Wide', 'Isometric_Chest_Squeezes', 'Push-Ups_With_Feet_Elevated', 'Pushups_Close_and_Wide_Hand_Positions', 'Clock_Push-Up', 'Push_Up_to_Side_Plank'],
+  ABS: ['Crunches', 'Plank', 'Russian_Twist', 'Dead_Bug', 'Reverse_Crunch', 'Air_Bike', 'Flutter_Kicks', 'Side_Bridge', 'Sit-Up', 'Oblique_Crunches_-_On_The_Floor', 'Cross-Body_Crunch', 'Bent-Knee_Hip_Raise'],
+  ARMS: ['Bench_Dips', 'Push-Ups_-_Close_Triceps_Position', 'Incline_Push-Up_Close-Grip', 'Standing_Towel_Triceps_Extension', 'Arm_Circles', 'Pushups_Close_and_Wide_Hand_Positions', 'Push_Up_to_Side_Plank', 'Triceps_Stretch'],
+  LEGS: ['Bodyweight_Squat', 'Bodyweight_Walking_Lunge', 'Butt_Lift_Bridge', 'Single_Leg_Glute_Bridge', 'Step-up_with_Knee_Raise', 'Freehand_Jump_Squat', 'Split_Squats', 'Glute_Kickback', 'Side_Leg_Raises', 'Rear_Leg_Raises'],
+  BACK_SHOULDERS: ['Superman', 'Cat_Stretch', 'Shoulder_Circles', 'Dynamic_Back_Stretch', 'Windmills', 'Torso_Rotation', 'Round_The_World_Shoulder_Stretch', 'One_Half_Locust', 'Upper_Back_Stretch', 'Elbows_Back'],
+  FULL_BODY: ['Star_Jump', 'Bodyweight_Squat', 'Pushups', 'Mountain_Climbers', 'Inchworm', 'Bodyweight_Walking_Lunge', 'Plank', 'Fast_Skipping', 'Single_Leg_Butt_Kick', 'Freehand_Jump_Squat'],
+  REST: ['Childs_Pose', 'Cat_Stretch', 'Hamstring_Stretch', 'Kneeling_Hip_Flexor', 'Dynamic_Chest_Stretch', 'Spinal_Stretch'],
+};
+
+const HOLD = new Set(['Plank', 'Side_Bridge', 'Isometric_Chest_Squeezes', 'Dead_Bug']);
+const CARDIO = new Set(['Mountain_Climbers', 'Star_Jump', 'Fast_Skipping', 'Single_Leg_Butt_Kick', 'Flutter_Kicks', 'Air_Bike', 'Freehand_Jump_Squat']);
+
+function repsFor(e) {
+  if (e.category === 'stretching') return 'Hold & breathe';
+  if (HOLD.has(e.id)) return 'Hold steady';
+  if (CARDIO.has(e.id)) return 'Steady, fast pace';
+  return '10-15 controlled reps';
+}
+
+function clean(text) {
+  return text.replace(/\s+/g, ' ').replace(/"/g, '\\"').replace(/\$/g, '\\$').trim();
+}
+
+function firstSentences(steps, count) {
+  const joined = steps.join(' ').replace(/\s+/g, ' ');
+  const parts = joined.match(/[^.!?]+[.!?]/g) ?? [joined];
+  return parts.slice(0, count).join(' ').trim();
+}
+
+const used = new Set();
+const lines = [];
+for (const [group, ids] of Object.entries(GROUPS)) {
+  lines.push(`        MuscleGroup.${group} to listOf(`);
+  const entries = [];
+  for (const id of ids) {
+    const e = byId.get(id);
+    if (!e) throw new Error('missing exercise ' + id);
+    used.add(id);
+    const name = e.name.replace(/_/g, ' ');
+    const steps = e.instructions ?? [];
+    const description = steps.length ? clean(firstSentences(steps, 2)) : "Move slowly and with control through the full range.";
+    const tip = steps.length ? clean(steps[steps.length - 1]) : "Breathe steadily and stop if you feel pain.";
+    const stepList = (steps.length ? steps : [description]).map((s) => `"${clean(s)}"`).join(", ");
+    const muscles = [...(e.primaryMuscles ?? []), ...(e.secondaryMuscles ?? [])].map((m) => m.charAt(0).toUpperCase() + m.slice(1)).join(", ");
+    entries.push(`            Template("${id}", "${clean(name)}", "${repsFor(e)}", "${description}", "${tip}", listOf(${stepList}), "${muscles}")`);
+  }
+  lines.push(entries.join(',\n'));
+  lines.push('        ),');
+}
+
+const outDir = path.resolve('shared/src/commonMain/composeResources/files/exercises');
+fs.mkdirSync(outDir, { recursive: true });
+let total = 0;
+for (const id of used) {
+  const e = byId.get(id);
+  for (let i = 0; i < Math.min(2, e.images.length); i++) {
+    const target = path.join(outDir, `${id.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${i}.jpg`);
+    if (fs.existsSync(target)) { total += fs.statSync(target).size; continue; }
+    const url = `https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/${id}/${i}.jpg`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${url} -> ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    fs.writeFileSync(target, buf);
+    total += buf.length;
+  }
+}
+console.log(`exercises: ${used.size}, images size: ${(total / 1024 / 1024).toFixed(1)} MB`);
+
+const kotlin = `package com.example.data.model
+
+// Generated by scripts/build_exercise_library.mjs from free-exercise-db (public domain, Unlicense).
+// Do not edit by hand; edit the script and regenerate.
+
+internal data class Template(
+    /** Id of the exercise in free-exercise-db; its two photos live in composeResources/files/exercises. */
+    val imageId: String,
+    val name: String,
+    val reps: String,
+    val description: String,
+    val tip: String,
+    val steps: List<String>,
+    val muscles: String
+)
+
+internal val exerciseLibrary: Map<MuscleGroup, List<Template>> = mapOf(
+${lines.join('\n')}
+)
+`;
+fs.writeFileSync('shared/src/commonMain/kotlin/com/example/data/model/ExerciseLibrary.kt', kotlin);

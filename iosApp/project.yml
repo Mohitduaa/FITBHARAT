@@ -1,0 +1,52 @@
+name: FitBharat
+options:
+  bundleIdPrefix: com.fitbharat
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Gradle runs from a build phase, which Xcode's script sandbox would block.
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  FitBharat:
+    type: application
+    platform: iOS
+    sources:
+      - FitBharat
+    info:
+      path: FitBharat/Info.plist
+      properties:
+        CFBundleDisplayName: FitBharat
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSCameraUsageDescription: FitBharat uses the camera to scan your meals and take your profile picture.
+        NSPhotoLibraryUsageDescription: FitBharat lets you pick a meal or profile photo from your library.
+        NSMotionUsageDescription: FitBharat uses motion data to count your daily steps.
+        GEMINI_API_KEY: $(GEMINI_API_KEY)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fitbharat.app
+        PRODUCT_NAME: FitBharat
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GEMINI_API_KEY: ""
+        FRAMEWORK_SEARCH_PATHS:
+          - $(inherited)
+          - $(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)
+        OTHER_LDFLAGS:
+          - $(inherited)
+          - -framework
+          - Shared
+          - -lsqlite3
+    preBuildScripts:
+      - name: Build shared Kotlin framework
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "$SRCROOT/.."
+          ./gradlew :shared:embedAndSignAppleFrameworkForXcode --console=plain
