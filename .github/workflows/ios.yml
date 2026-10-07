@@ -19,8 +19,10 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      # The Gradle build also configures the Android modules, so an Android SDK must exist.
-      - uses: android-actions/setup-android@v3
+      # The Gradle build also configures the Android modules, so an Android SDK must exist. The macOS runner
+      # already has one (ANDROID_HOME); only its licences need accepting so Gradle can fetch compileSdk 37.
+      - name: Accept Android SDK licences
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -40,6 +42,10 @@ jobs:
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then GEMINI_API_KEY="MY_GEMINI_API_KEY"; fi
           echo "GEMINI_API_KEY=$GEMINI_API_KEY" > .env
+
+      # Git on Windows does not keep the executable bit, and Xcode's build phase calls ./gradlew.
+      - name: Make gradlew executable
+        run: chmod +x gradlew
 
       - name: Generate Xcode project
         working-directory: iosApp
