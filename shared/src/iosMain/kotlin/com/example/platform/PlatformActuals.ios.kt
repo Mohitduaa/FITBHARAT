@@ -200,17 +200,3 @@ actual fun rememberBackupFiles(
         IosBackupFiles({ latestPicked.value(it) }, { latestSaved.value() }, { latestError.value(it) })
     }
 }
-
-// ---------------------------------------------------------------- barcode
-
-/** Barcode scanning needs a camera scanner view that is not built for iPhone yet; typing foods still works. */
-@Composable
-actual fun rememberBarcodeScanner(
-    onScanned: (barcode: String) -> Unit,
-    onError: (message: String) -> Unit
-): BarcodeScanner = remember {
-    object : BarcodeScanner {
-        override val isAvailable = false
-        override fun scan() = onError("Barcode scanning is not available on iPhone yet.")
-    }
-}
