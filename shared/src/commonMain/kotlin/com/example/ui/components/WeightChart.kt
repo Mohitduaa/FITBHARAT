@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import com.example.data.model.GoalType
 import com.example.ui.theme.WarningAmber
 import kotlin.math.abs
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -155,14 +156,9 @@ fun WeightTrackerOverviewCard(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
-                    modifier = Modifier.testTag("log_today_weight_button")
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    modifier = Modifier.height(36.dp).testTag("log_today_weight_button")
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
                     Text("Log Weight", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -222,11 +218,17 @@ fun WeightTrackerOverviewCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        val awayFromGoal = when (goal) {
+                            GoalType.LOSE -> change > 0.05
+                            GoalType.GAIN -> change < -0.05
+                            GoalType.MAINTAIN -> false
+                        }
                         Text(
-                            text = "$progressPercent% Completed",
+                            text = if (awayFromGoal) "${abs(change).toFixed(1)} kg ${if (change > 0) "above" else "below"} start"
+                            else "$progressPercent% Completed",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = if (awayFromGoal) CarbsAmber else MaterialTheme.colorScheme.primary
                         )
                     }
 

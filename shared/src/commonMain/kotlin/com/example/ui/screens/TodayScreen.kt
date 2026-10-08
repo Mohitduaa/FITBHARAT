@@ -433,7 +433,7 @@ fun TodayScreen(
                 ) {
                     Icon(Icons.Default.Restaurant, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("+ Log Custom", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Log Custom", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

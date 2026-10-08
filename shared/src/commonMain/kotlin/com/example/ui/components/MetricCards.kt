@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -536,15 +537,33 @@ fun WaterTrackerCard(
                         )
                     }
                 }
-                FilledTonalIconButton(
-                    onClick = { onAddWater(250) },
-                    modifier = Modifier.testTag("add_water_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Add 250ml water",
-                        tint = WaterBlue
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Undo a mistaken tap.
+                    if (waterMl > 0) {
+                        androidx.compose.material3.IconButton(
+                            onClick = { onAddWater(-250) },
+                            modifier = Modifier.testTag("remove_water_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Remove,
+                                contentDescription = "Remove 250ml water",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    FilledTonalIconButton(
+                        onClick = { onAddWater(250) },
+                        colors = androidx.compose.material3.IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = WaterBlue.copy(alpha = 0.15f),
+                            contentColor = WaterBlue
+                        ),
+                        modifier = Modifier.testTag("add_water_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add 250ml water"
+                        )
+                    }
                 }
             }
 
