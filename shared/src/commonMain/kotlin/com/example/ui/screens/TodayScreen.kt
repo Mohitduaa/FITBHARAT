@@ -90,6 +90,10 @@ fun TodayScreen(
     dailyPlan: DailyDesiPlan,
     onAddSteps: (Int) -> Unit,
     onSetSteps: (Int) -> Unit = {},
+    activeFast: com.example.data.local.FastingSessionEntity? = null,
+    lastFast: com.example.data.local.FastingSessionEntity? = null,
+    onStartFast: (Int) -> Unit = {},
+    onEndFast: () -> Unit = {},
     stepTrackingMode: StepTrackingMode,
     onEnableStepTracking: () -> Unit,
     onAddWater: (Int) -> Unit,
@@ -362,6 +366,15 @@ fun TodayScreen(
                 goal = goal,
                 suggestion = dailyPlan.meals.firstOrNull { it.mealType == slot },
                 onAddSuggestion = onLogPlannedMeal
+            )
+        }
+
+        item {
+            com.example.ui.components.FastingCard(
+                active = activeFast,
+                lastCompleted = lastFast,
+                onStart = onStartFast,
+                onEnd = onEndFast
             )
         }
 

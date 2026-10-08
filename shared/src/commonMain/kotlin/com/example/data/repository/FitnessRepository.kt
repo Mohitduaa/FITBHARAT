@@ -4,6 +4,9 @@ import com.example.data.local.AppDao
 import com.example.data.local.ChallengeProgressEntity
 import com.example.data.local.DailyLogEntity
 import com.example.data.local.DailyMealTotals
+import com.example.data.local.FastingSessionEntity
+import com.example.data.model.WeeklyReport
+import com.example.util.currentTimeMillis
 import com.example.data.local.MealEntity
 import com.example.data.local.UserProfileEntity
 import com.example.data.local.WorkoutProgressEntity
@@ -53,6 +56,30 @@ class FitnessRepository(private val appDao: AppDao) {
             it ?: DailyLogEntity(date = getTodayDate(), steps = 0, waterMl = 0, caloriesBurned = 0)
         }
     }
+
+    val activeFast: Flow<FastingSessionEntity?> = appDao.getActiveFast()
+
+    val recentFasts: Flow<List<FastingSessionEntity>> = appDao.getRecentFasts(60)
+
+    suspend fun startFast(targetHours: Int): FastingSessionEntity {
+        val fast = FastingSessionEntity(startMillis = currentTimeMillis(), targetHours = targetHours)
+        return fast.copy(id = appDao.insertFast(fast))
+    }
+
+    suspend fun endFast() {
+        val active = appDao.getActiveFast().firstOrNull() ?: return
+        appDao.insertFast(active.copy(endMillis = currentTimeMillis()))
+    }
+
+    /** This week's report from everything stored; also used by the Sunday notification. */
+    suspend fun weeklyReport(): WeeklyReport = WeeklyReport.compute(
+        profile = userProfile.firstOrNull() ?: UserProfileEntity(),
+        weightLogs = appDao.allWeightLogsOnce(),
+        dailyLogs = appDao.allDailyLogsOnce(),
+        mealTotals = appDao.getDailyMealTotals().firstOrNull().orEmpty(),
+        fasts = appDao.allFastsOnce(),
+        today = todayDate()
+    )
 
     fun getRecentDailyLogs(limit: Int = 7): Flow<List<DailyLogEntity>> {
         return appDao.getRecentDailyLogs(limit)

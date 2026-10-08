@@ -161,6 +161,40 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     val recentDailyLogs: StateFlow<List<DailyLogEntity>> = repository.getRecentDailyLogs(7)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // Intermittent fasting
+    val activeFast: StateFlow<com.example.data.local.FastingSessionEntity?> = repository.activeFast
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val lastCompletedFast: StateFlow<com.example.data.local.FastingSessionEntity?> = repository.recentFasts
+        .map { list -> list.firstOrNull { it.endMillis != null } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun startFast(hours: Int) {
+        viewModelScope.launch {
+            val fast = repository.startFast(hours)
+            container.platform.reminders.requestPermission()
+            container.platform.reminders.scheduleFastEnd(fast.startMillis + hours * 3_600_000L)
+        }
+    }
+
+    fun endFast() {
+        viewModelScope.launch {
+            repository.endFast()
+            container.platform.reminders.scheduleFastEnd(null)
+        }
+    }
+
+    /** This week's report; recomputed whenever logs, meals, weight or fasts change. */
+    val weeklyReport: StateFlow<com.example.data.model.WeeklyReport?> = combine(
+        userProfile,
+        repository.allWeightLogs,
+        repository.getRecentDailyLogs(14),
+        repository.dailyMealTotals,
+        repository.recentFasts
+    ) { profile, weights, logs, totals, fasts ->
+        com.example.data.model.WeeklyReport.compute(profile, weights, logs, totals, fasts, todayDate())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
     /** The last 30 days of step / water logs for the history chart. */
     val historyLogs: StateFlow<List<DailyLogEntity>> = repository.getRecentDailyLogs(30)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

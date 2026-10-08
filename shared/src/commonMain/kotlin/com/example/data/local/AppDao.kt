@@ -63,6 +63,20 @@ interface AppDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWorkoutProgress(progress: WorkoutProgressEntity)
 
+    // Intermittent fasting
+    @Query("SELECT * FROM fasting_sessions WHERE endMillis IS NULL ORDER BY startMillis DESC LIMIT 1")
+    fun getActiveFast(): Flow<FastingSessionEntity?>
+
+    @Query("SELECT * FROM fasting_sessions ORDER BY startMillis DESC LIMIT :limit")
+    fun getRecentFasts(limit: Int): Flow<List<FastingSessionEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFast(fast: FastingSessionEntity): Long
+
+    @Query("SELECT * FROM fasting_sessions") suspend fun allFastsOnce(): List<FastingSessionEntity>
+    @Query("DELETE FROM fasting_sessions") suspend fun clearFasts()
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun insertFasts(items: List<FastingSessionEntity>)
+
     // Backup / restore
     @Query("SELECT * FROM daily_logs") suspend fun allDailyLogsOnce(): List<DailyLogEntity>
     @Query("SELECT * FROM meals") suspend fun allMealsOnce(): List<MealEntity>

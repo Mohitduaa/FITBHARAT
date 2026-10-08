@@ -106,3 +106,13 @@ data class WorkoutProgressEntity(
     @PrimaryKey val dayId: String,
     val completedAt: Long = currentTimeMillis()
 )
+
+/** One intermittent fast; [endMillis] is null while it is running. */
+@Serializable
+@Entity(tableName = "fasting_sessions")
+data class FastingSessionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val startMillis: Long,
+    val endMillis: Long? = null,
+    val targetHours: Int
+)

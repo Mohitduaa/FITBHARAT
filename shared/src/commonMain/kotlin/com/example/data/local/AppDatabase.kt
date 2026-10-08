@@ -18,9 +18,10 @@ const val DATABASE_NAME = "losemate_fitdesi.db"
         WeightLogEntity::class,
         UserProfileEntity::class,
         ChallengeProgressEntity::class,
-        WorkoutProgressEntity::class
+        WorkoutProgressEntity::class,
+        FastingSessionEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @ConstructedBy(AppDatabaseConstructor::class)
@@ -60,6 +61,15 @@ private val MIGRATION_3_4 = object : Migration(3, 4) {
 }
 
 /** v5: reminder switches. */
+private val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL(
+            "CREATE TABLE IF NOT EXISTS `fasting_sessions` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`startMillis` INTEGER NOT NULL, `endMillis` INTEGER, `targetHours` INTEGER NOT NULL)"
+        )
+    }
+}
+
 private val MIGRATION_8_9 = object : Migration(8, 9) {
     override fun migrate(connection: SQLiteConnection) {
         connection.execSQL("ALTER TABLE user_profile ADD COLUMN themeMode TEXT NOT NULL DEFAULT 'SYSTEM'")
@@ -93,7 +103,7 @@ private val MIGRATION_4_5 = object : Migration(4, 5) {
 }
 
 fun RoomDatabase.Builder<AppDatabase>.configure(): AppDatabase =
-    addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+    addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(databaseDispatcher())
         .build()

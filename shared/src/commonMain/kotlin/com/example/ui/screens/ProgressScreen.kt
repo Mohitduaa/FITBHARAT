@@ -75,6 +75,7 @@ fun ProgressScreen(
     weightLogs: List<WeightLogEntity>,
     recentDailyLogs: List<DailyLogEntity>,
     historyLogs: List<DailyLogEntity>,
+    weeklyReport: com.example.data.model.WeeklyReport? = null,
     challenges: List<DesiChallenge>,
     onOpenLogWeightDialog: () -> Unit,
     onCheckInChallenge: (String) -> Unit,
@@ -83,16 +84,6 @@ fun ProgressScreen(
 ) {
     var selectedSubTab by remember { mutableIntStateOf(0) } // 0: Weight & Progress Report, 1: Desi Challenges
 
-    val avgSteps = remember(recentDailyLogs) {
-        if (recentDailyLogs.isNotEmpty()) recentDailyLogs.map { it.steps }.average().toInt() else 0
-    }
-    val stepGoalDays = remember(recentDailyLogs, profile.stepGoal) {
-        recentDailyLogs.count { it.steps >= profile.stepGoal }
-    }
-    val weeklyChange = remember(weightLogs) { weeklyWeightChange(weightLogs) }
-    val avgWater = remember(recentDailyLogs) {
-        if (recentDailyLogs.isNotEmpty()) recentDailyLogs.map { it.waterMl }.average().toInt() else 0
-    }
 
     LazyColumn(
         modifier = modifier
@@ -167,96 +158,7 @@ fun ProgressScreen(
                 )
             }
 
-            // Progress Report (Weekly Summary)
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("weekly_report_card"),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Weekly Progress Summary",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Last 7 days consistency analysis",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            if (weeklyChange != null) Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(SuccessGreen.copy(alpha = 0.15f))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = weeklyChange,
-                                    color = SuccessGreen,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            WeeklyStatBox("Avg Steps", "$avgSteps / day", MaterialTheme.colorScheme.primary)
-                            WeeklyStatBox("Avg Water", "${(avgWater / 1000.0).toFixed(1)} L / day", WaterBlue)
-                            WeeklyStatBox("Step Goal", "$stepGoalDays / ${recentDailyLogs.size.coerceAtLeast(1)} days", MaterialTheme.colorScheme.secondary)
-                        }
-
-                        Spacer(modifier = Modifier.height(18.dp))
-
-                        // Coach Weekly Verdict
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                                .padding(16.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.Top) {
-                                Icon(
-                                    imageVector = Icons.Default.BarChart,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = "Weekly Review",
-                                        fontWeight = FontWeight.Bold,
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = weeklyReview(profile, recentDailyLogs),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            item { com.example.ui.components.WeeklyReportCard(report = weeklyReport, goal = profile.goal()) }
 
             // Weight Log History
             item {
@@ -484,34 +386,4 @@ fun ChallengeCard(
     }
 }
 
-/** Plain-language summary of the last week's logs; no invented numbers. */
-private fun weeklyReview(profile: UserProfileEntity, logs: List<DailyLogEntity>): String {
-    val tracked = logs.filter { it.steps > 0 || it.waterMl > 0 || it.score > 0 }
-    if (tracked.isEmpty()) {
-        return "Not enough data yet. Log meals, steps and weight for a few days to see your weekly review."
-    }
-    val days = tracked.size
-    val avgSteps = tracked.sumOf { it.steps } / days
-    val stepDays = tracked.count { it.steps >= profile.stepGoal }
-    val waterDays = tracked.count { it.waterMl >= profile.waterGoalMl }
-    val name = profile.name.ifBlank { "You" }
-    return "$name, over the last $days days you averaged ${avgSteps.withCommas()} steps a day, " +
-        "met your step goal on $stepDays of $days days and your water goal on $waterDays of $days days. " +
-        when {
-            stepDays * 2 >= days -> "Great consistency. Keep it up."
-            else -> "Try to walk a little more each day; small increases add up."
-        }
-}
 
-/** Weight change over the last 7 days from real logs, e.g. "-0.8 kg this week"; null with fewer than two logs. */
-private fun weeklyWeightChange(logs: List<WeightLogEntity>): String? {
-    if (logs.size < 2) return null
-    val sorted = logs.sortedBy { it.date }
-    val latest = sorted.last()
-    val weekAgo = todayDate().minusDays(7).toKey()
-    val baseline = sorted.lastOrNull { it.date <= weekAgo } ?: sorted.first()
-    if (baseline === latest) return null
-    val change = latest.weightKg - baseline.weightKg
-    val sign = if (change > 0.05) "+" else if (change < -0.05) "-" else ""
-    return "$sign${kotlin.math.abs(change).toFixed(1)} kg this week"
-}

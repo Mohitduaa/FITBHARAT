@@ -82,6 +82,9 @@ interface ReminderScheduler {
 
     /** Asks for notification permission where the OS requires it (Android 13+, iOS). */
     fun requestPermission()
+
+    /** A one-off "fast complete" notification at [atMillis]; null cancels it. */
+    fun scheduleFastEnd(atMillis: Long?)
 }
 
 /** Where the daily backup stands, for the settings screen. */

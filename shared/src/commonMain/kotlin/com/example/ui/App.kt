@@ -101,6 +101,9 @@ fun FitBharatApp(viewModel: MainViewModel) {
     val allWeightLogs by viewModel.allWeightLogs.collectAsStateWithLifecycle()
     val recentDailyLogs by viewModel.recentDailyLogs.collectAsStateWithLifecycle()
     val historyLogs by viewModel.historyLogs.collectAsStateWithLifecycle()
+    val activeFast by viewModel.activeFast.collectAsStateWithLifecycle()
+    val lastFast by viewModel.lastCompletedFast.collectAsStateWithLifecycle()
+    val weeklyReport by viewModel.weeklyReport.collectAsStateWithLifecycle()
     val challenges by viewModel.challenges.collectAsStateWithLifecycle()
     val dailyPlan by viewModel.dailyDesiPlan.collectAsStateWithLifecycle()
     val nutritionPlan by viewModel.nutritionPlan.collectAsStateWithLifecycle()
@@ -179,6 +182,10 @@ fun FitBharatApp(viewModel: MainViewModel) {
                         dailyPlan = dailyPlan,
                         onAddSteps = { viewModel.addSteps(it) },
                         onSetSteps = { viewModel.setTodaySteps(it) },
+                        activeFast = activeFast,
+                        lastFast = lastFast,
+                        onStartFast = { viewModel.startFast(it) },
+                        onEndFast = { viewModel.endFast() },
                         stepTrackingMode = stepTrackingMode,
                         onEnableStepTracking = { viewModel.requestStepPermission() },
                         onAddWater = { viewModel.addWater(it) },
@@ -221,6 +228,7 @@ fun FitBharatApp(viewModel: MainViewModel) {
                         weightLogs = allWeightLogs,
                         recentDailyLogs = recentDailyLogs,
                         historyLogs = historyLogs,
+                        weeklyReport = weeklyReport,
                         challenges = challenges,
                         onOpenLogWeightDialog = { showLogWeightDialog = true },
                         onCheckInChallenge = { viewModel.checkInChallenge(it) },

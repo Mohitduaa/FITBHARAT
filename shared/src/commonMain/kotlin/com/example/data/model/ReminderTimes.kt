@@ -11,7 +11,9 @@ data class ReminderTimes(
     val waterEnd: Int = 21 * 60,
     val lunch: Int = 13 * 60 + 30,
     val dinner: Int = 21 * 60,
-    val walk: Int = 18 * 60 + 30
+    val walk: Int = 18 * 60 + 30,
+    /** Sunday 7 PM summary of the week. */
+    val weeklyReport: Boolean = false
 ) {
     fun toJson(): String = json.encodeToString(this)
 

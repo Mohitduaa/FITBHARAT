@@ -24,7 +24,8 @@ data class BackupFile(
     val meals: List<MealEntity>,
     val weightLogs: List<WeightLogEntity>,
     val challenges: List<ChallengeProgressEntity>,
-    val workoutProgress: List<WorkoutProgressEntity> = emptyList()
+    val workoutProgress: List<WorkoutProgressEntity> = emptyList(),
+    val fastingSessions: List<com.example.data.local.FastingSessionEntity> = emptyList()
 ) {
     companion object {
         const val APP_ID = "fitbharat"
@@ -48,7 +49,8 @@ class BackupManager(private val dao: AppDao) {
             meals = dao.allMealsOnce(),
             weightLogs = dao.allWeightLogsOnce(),
             challenges = dao.allChallengesOnce(),
-            workoutProgress = dao.allWorkoutProgressOnce()
+            workoutProgress = dao.allWorkoutProgressOnce(),
+            fastingSessions = dao.allFastsOnce()
         )
     )
 
@@ -73,11 +75,13 @@ class BackupManager(private val dao: AppDao) {
         dao.clearWeightLogs()
         dao.clearChallenges()
         dao.clearWorkoutProgress()
+        dao.clearFasts()
         dao.insertOrUpdateProfile(profile.copy(isOnboarded = true))
         dao.insertDailyLogs(backup.dailyLogs)
         dao.insertMeals(backup.meals)
         dao.insertWeightLogs(backup.weightLogs)
         dao.insertChallenges(backup.challenges)
         dao.insertWorkoutProgressList(backup.workoutProgress)
+        dao.insertFasts(backup.fastingSessions)
     }
 }

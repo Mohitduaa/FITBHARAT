@@ -9,6 +9,7 @@ import platform.UserNotifications.UNCalendarNotificationTrigger
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotificationRequest
 import platform.UserNotifications.UNNotificationSound
+import platform.UserNotifications.UNTimeIntervalNotificationTrigger
 import platform.UserNotifications.UNUserNotificationCenter
 
 /** Daily local notifications. iOS keeps repeating calendar triggers across restarts by itself. */
@@ -40,10 +41,44 @@ class IosReminderScheduler : ReminderScheduler {
                 add("${PREFIX}lunch", "Log your lunch", "Add what you ate to keep your calorie count accurate.", times.lunch)
                 add("${PREFIX}dinner", "Log your dinner", "Finish today's food log before bed.", times.dinner)
             }
+            if (times.weeklyReport) {
+                val sunday = NSDateComponents().apply {
+                    weekday = 1
+                    hour = 19
+                    minute = 0
+                }
+                val content = UNMutableNotificationContent().apply {
+                    setTitle("Your weekly report")
+                    setBody("See how your week went: weight, calories, steps and fasting.")
+                    setSound(UNNotificationSound.defaultSound)
+                }
+                val trigger = UNCalendarNotificationTrigger.triggerWithDateMatchingComponents(sunday, repeats = true)
+                notifications.addNotificationRequest(
+                    UNNotificationRequest.requestWithIdentifier("${PREFIX}weekly", content = content, trigger = trigger),
+                    withCompletionHandler = null
+                )
+            }
             if (walk) {
                 add("${PREFIX}walk", "Evening walk", "A 15-minute walk now helps you reach your step goal.", times.walk)
             }
         }
+    }
+
+    override fun scheduleFastEnd(atMillis: Long?) {
+        center.removePendingNotificationRequestsWithIdentifiers(listOf(FAST_ID))
+        if (atMillis == null) return
+        val seconds = (atMillis - com.example.util.currentTimeMillis()) / 1000.0
+        if (seconds <= 1.0) return
+        val content = UNMutableNotificationContent().apply {
+            setTitle("Fast complete")
+            setBody("Well done! Break your fast with a balanced, protein-rich meal.")
+            setSound(UNNotificationSound.defaultSound)
+        }
+        val trigger = UNTimeIntervalNotificationTrigger.triggerWithTimeInterval(seconds, repeats = false)
+        center.addNotificationRequest(
+            UNNotificationRequest.requestWithIdentifier(FAST_ID, content = content, trigger = trigger),
+            withCompletionHandler = null
+        )
     }
 
     private fun add(id: String, title: String, body: String, minutesAfterMidnight: Int) {
@@ -63,5 +98,7 @@ class IosReminderScheduler : ReminderScheduler {
 
     private companion object {
         const val PREFIX = "fb_"
+        // Not under PREFIX, so re-applying the daily reminders never removes a running fast's alert.
+        const val FAST_ID = "fasting_end"
     }
 }

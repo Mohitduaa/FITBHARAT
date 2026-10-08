@@ -410,6 +410,10 @@ fun ProfileEditDialog(
                                 TimeChip("Dinner", t.dinner) { reminderTimes = reminderTimes.copy(dinner = it) }
                             }
                         }
+                        ReminderRow("Weekly report", "Sundays at 7:00 PM", t.weeklyReport) {
+                            reminderTimes = reminderTimes.copy(weeklyReport = it)
+                            if (it) onEnableReminders()
+                        }
                         ReminderRow("Walk", formatClock(t.walk), remindWalk) {
                             remindWalk = it
                             if (it) onEnableReminders()
