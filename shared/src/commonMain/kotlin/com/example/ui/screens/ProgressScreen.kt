@@ -158,6 +158,11 @@ fun ProgressScreen(
                 )
             }
 
+            item {
+                val timeline = remember(profile, weightLogs) { com.example.data.model.GoalTimeline.compute(profile, weightLogs, todayDate()) }
+                com.example.ui.components.GoalTimelineCard(timeline)
+            }
+
             item { com.example.ui.components.WeeklyReportCard(report = weeklyReport, goal = profile.goal()) }
 
             // Weight Log History

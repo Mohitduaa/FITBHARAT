@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -48,7 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Badge
 import com.example.data.model.BadgeIcon
 
-private fun BadgeIcon.vector(): ImageVector = when (this) {
+internal fun BadgeIcon.vector(): ImageVector = when (this) {
     BadgeIcon.MEAL -> Icons.Default.Restaurant
     BadgeIcon.WORKOUT -> Icons.Default.FitnessCenter
     BadgeIcon.WEIGHT -> Icons.Default.MonitorWeight
@@ -58,6 +59,7 @@ private fun BadgeIcon.vector(): ImageVector = when (this) {
     BadgeIcon.STAR -> Icons.Default.Star
     BadgeIcon.PROGRAM -> Icons.Default.MilitaryTech
     BadgeIcon.TROPHY -> Icons.Default.EmojiEvents
+    BadgeIcon.FAST -> Icons.Default.Timer
 }
 
 /** Grid of achievements; earned ones are filled in the accent colour. Tap one for details. */
@@ -123,4 +125,23 @@ fun BadgesCard(badges: List<Badge>, modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+/** Pops up once when a new badge is earned. */
+@Composable
+fun NewBadgeDialog(badge: Badge, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Box(
+                modifier = Modifier.size(72.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(badge.icon.vector(), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(38.dp))
+            }
+        },
+        title = { Text("New badge: ${badge.title}", textAlign = TextAlign.Center) },
+        text = { Text("${badge.description}\nKeep it up!", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+        confirmButton = { TextButton(onClick = onDismiss, modifier = Modifier.testTag("new_badge_ok")) { Text("Awesome!") } }
+    )
 }

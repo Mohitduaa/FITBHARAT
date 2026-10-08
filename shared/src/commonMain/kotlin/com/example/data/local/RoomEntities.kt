@@ -79,7 +79,11 @@ data class UserProfileEntity(
     /** JSON of [com.example.data.model.WidgetConfig]; empty means the defaults. */
     @ColumnInfo(defaultValue = "") val widgetConfig: String = "",
     /** App theme: "SYSTEM", "LIGHT" or "DARK". */
-    @ColumnInfo(defaultValue = "SYSTEM") val themeMode: String = "SYSTEM"
+    @ColumnInfo(defaultValue = "SYSTEM") val themeMode: String = "SYSTEM",
+    /** JSON of [com.example.data.model.AiDietPlan] made by Gemini; empty when none. */
+    @ColumnInfo(defaultValue = "") val aiDietPlan: String = "",
+    /** Comma-separated ids of badges the user has already been congratulated on; empty = not started. */
+    @ColumnInfo(defaultValue = "") val seenBadges: String = ""
 )
 
 @Serializable

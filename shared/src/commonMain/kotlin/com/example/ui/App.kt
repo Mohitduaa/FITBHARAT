@@ -106,11 +106,18 @@ fun FitBharatApp(viewModel: MainViewModel) {
     val weeklyReport by viewModel.weeklyReport.collectAsStateWithLifecycle()
     val challenges by viewModel.challenges.collectAsStateWithLifecycle()
     val dailyPlan by viewModel.dailyDesiPlan.collectAsStateWithLifecycle()
+    val aiDietPlan by viewModel.aiDietPlan.collectAsStateWithLifecycle()
+    val dietPlanBusy by viewModel.dietPlanBusy.collectAsStateWithLifecycle()
+    val dietPlanError by viewModel.dietPlanError.collectAsStateWithLifecycle()
     val nutritionPlan by viewModel.nutritionPlan.collectAsStateWithLifecycle()
     val streaks by viewModel.streaks.collectAsStateWithLifecycle()
     val recentFoods by viewModel.recentFoods.collectAsStateWithLifecycle()
     val dailyMealTotals by viewModel.dailyMealTotals.collectAsStateWithLifecycle()
     val badges by viewModel.badges.collectAsStateWithLifecycle()
+    val newBadge by viewModel.newBadge.collectAsStateWithLifecycle()
+    newBadge?.let { badge ->
+        com.example.ui.components.NewBadgeDialog(badge) { viewModel.markBadgeSeen(badge.id) }
+    }
     val barcodeState by viewModel.barcodeState.collectAsStateWithLifecycle()
     val barcodeScanner = rememberBarcodeScanner(
         onScanned = { viewModel.lookupBarcode(it) },
@@ -204,7 +211,25 @@ fun FitBharatApp(viewModel: MainViewModel) {
                         onOpenAddMeal = { viewModel.openAddMeal(it) },
                         onDeleteMeal = { viewModel.deleteMeal(it) },
                         onUpdateMeal = { viewModel.updateMeal(it) },
-                        onOpenAiScan = { showAiScanModalManual = true }
+                        onOpenAiScan = { showAiScanModalManual = true },
+                        aiPlanSlot = {
+                            com.example.ui.components.AiDietPlanCard(
+                                profile = userProfile,
+                                nutrition = nutritionPlan,
+                                plan = aiDietPlan,
+                                busy = dietPlanBusy,
+                                error = dietPlanError,
+                                aiAvailable = viewModel.aiConfigured,
+                                loggedMealTypes = todayMeals.map { it.mealType }.toSet(),
+                                onGenerate = { viewModel.generateDietPlan(it) },
+                                onClear = { viewModel.clearDietPlan() },
+                                onLogMeal = { meal ->
+                                    aiDietPlan?.toDailyPlan(userProfile.stepGoal, userProfile.waterGoalMl)?.meals
+                                        ?.firstOrNull { it.mealType == meal.type }
+                                        ?.let { viewModel.logPlannedMeal(it) }
+                                }
+                            )
+                        }
                     )
                 }
                 MainTab.WORKOUTS -> {

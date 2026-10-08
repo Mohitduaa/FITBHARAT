@@ -151,6 +151,30 @@ class ReminderReceiver : BroadcastReceiver() {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) return
 
+        // Smart reminders: read today's log and skip (or personalise) the reminder.
+        val smartKind = when (kind) {
+            ReminderKind.MEAL_LUNCH -> com.example.data.model.SmartReminderKind.LUNCH
+            ReminderKind.MEAL_DINNER -> com.example.data.model.SmartReminderKind.DINNER
+            ReminderKind.WALK -> com.example.data.model.SmartReminderKind.WALK
+            ReminderKind.WATER -> com.example.data.model.SmartReminderKind.WATER
+            else -> null
+        }
+        val smartHolder = context.applicationContext as? AppContainerHolder
+        if (smartKind != null && t.smart && smartHolder != null) {
+            val pending = goAsync()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO).launch {
+                try {
+                    val status = smartHolder.container.repository.todayStatus()
+                    com.example.data.model.SmartReminders.message(smartKind, status, t)?.let { show(context, kind, it) }
+                } catch (e: Exception) {
+                    show(context, kind, kind.text)
+                } finally {
+                    pending.finish()
+                }
+            }
+            return
+        }
+
         // The weekly report carries this week's real numbers, which need a database read.
         if (kind == ReminderKind.WEEKLY) {
             val holder = context.applicationContext as? AppContainerHolder

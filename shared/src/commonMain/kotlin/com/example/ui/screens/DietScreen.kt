@@ -73,7 +73,8 @@ fun DietScreen(
     onDeleteMeal: (Long) -> Unit,
     onOpenAiScan: () -> Unit,
     modifier: Modifier = Modifier,
-    onUpdateMeal: (MealEntity) -> Unit = {}
+    onUpdateMeal: (MealEntity) -> Unit = {},
+    aiPlanSlot: @Composable () -> Unit = {}
 ) {
     var editing by remember { mutableStateOf<MealEntity?>(null) }
     editing?.let { meal ->
@@ -161,6 +162,8 @@ fun DietScreen(
                 }
             }
         }
+
+        item { aiPlanSlot() }
 
         // Meal Sections
         items(MealType.values()) { mealType ->

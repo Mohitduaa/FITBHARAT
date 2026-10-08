@@ -71,6 +71,20 @@ class FitnessRepository(private val appDao: AppDao) {
         appDao.insertFast(active.copy(endMillis = currentTimeMillis()))
     }
 
+    /** Today's meals, steps and water, for the smart reminders. */
+    suspend fun todayStatus(): com.example.data.model.TodayStatus {
+        val today = getTodayDate()
+        val meals = appDao.getMealsForDate(today).firstOrNull().orEmpty()
+        val log = appDao.getDailyLog(today).firstOrNull()
+        return com.example.data.model.TodayStatus(
+            lunchLogged = meals.any { it.mealType == MealType.LUNCH.name },
+            dinnerLogged = meals.any { it.mealType == MealType.DINNER.name },
+            steps = log?.steps ?: 0,
+            waterMl = log?.waterMl ?: 0,
+            waterGoalMl = (appDao.profileOnce() ?: UserProfileEntity()).waterGoalMl
+        )
+    }
+
     /** This week's report from everything stored; also used by the Sunday notification. */
     suspend fun weeklyReport(): WeeklyReport = WeeklyReport.compute(
         profile = userProfile.firstOrNull() ?: UserProfileEntity(),
@@ -140,6 +154,12 @@ class FitnessRepository(private val appDao: AppDao) {
             )
         }
         recalculateTodayScore()
+    }
+
+    /** Changes stored-only fields (AI plan, seen badges) without re-deriving targets. */
+    suspend fun editProfile(change: (UserProfileEntity) -> UserProfileEntity) {
+        val current = appDao.profileOnce() ?: return
+        appDao.insertOrUpdateProfile(change(current))
     }
 
     suspend fun addMeal(

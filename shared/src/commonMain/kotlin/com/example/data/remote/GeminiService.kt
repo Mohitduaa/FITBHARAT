@@ -1,5 +1,7 @@
 package com.example.data.remote
 
+import com.example.data.model.NutritionPlan
+import com.example.data.model.AiDietPlan
 import com.example.data.local.UserProfileEntity
 import com.example.data.model.AiFoodScanResult
 import com.example.data.model.DetectedItem
@@ -49,7 +51,9 @@ class GeminiService(private val platform: PlatformServices) {
     private val client = HttpClient {
         install(HttpTimeout) {
             connectTimeoutMillis = 20_000
-            requestTimeoutMillis = 75_000
+            requestTimeoutMillis = 120_000
+            // Long answers (a full diet plan) can take a while before the first byte arrives.
+            socketTimeoutMillis = 90_000
         }
     }
 
@@ -187,6 +191,83 @@ class GeminiService(private val platform: PlatformServices) {
             null
         }
     }
+
+    /**
+     * A one-day Indian meal plan for the user's height, weight, age, goal and food preference,
+     * hitting [plan]'s calories and protein. [extra] is the user's own wish, e.g. "no rice, more paneer".
+     */
+    suspend fun generateDietPlan(profile: UserProfileEntity, plan: NutritionPlan, extra: String): AiDietPlan =
+        withContext(Dispatchers.Default) {
+            if (apiKey == null) throw FoodScanException("AI abhi set up nahi hai.")
+            val heightM = profile.heightCm / 100.0
+            val bmi = if (heightM > 0) profile.currentWeightKg / (heightM * heightM) else 0.0
+            val goalText = when (profile.goal()) {
+                GoalType.LOSE -> "lose weight (fat loss) at about ${profile.weeklyRateKg} kg per week"
+                GoalType.GAIN -> "gain weight (lean muscle) at about ${profile.weeklyRateKg} kg per week"
+                GoalType.MAINTAIN -> "maintain weight"
+            }
+            val diet = when (profile.dietPreference) {
+                "NON_VEGETARIAN" -> "non-vegetarian (chicken, fish, eggs allowed)"
+                "EGGETARIAN" -> "eggetarian (vegetarian plus eggs, no meat or fish)"
+                "VEGAN" -> "vegan (no dairy, no eggs, no meat)"
+                "JAIN" -> "Jain vegetarian (no onion, garlic, potato or other root vegetables; no eggs or meat)"
+                else -> "pure vegetarian (dairy ok, no eggs, no meat or fish)"
+            }
+            val prompt = """
+                You are a certified Indian dietitian. Make a practical one-day meal plan using common Indian home food.
+                User: ${profile.gender}, ${profile.age} years, ${profile.heightCm.toInt()} cm, ${profile.currentWeightKg} kg
+                (BMI ${(bmi * 10).toInt() / 10.0}), target weight ${profile.targetWeightKg} kg, activity: ${profile.activityLevel.lowercase()}.
+                Goal: $goalText. Diet: $diet.
+                Daily target: ${plan.dailyCalories} kcal, protein ${plan.proteinG} g, carbs ${plan.carbsG} g, fat ${plan.fatG} g.
+                ${if (extra.isNotBlank()) "User's request: ${extra.trim().take(300)}" else ""}
+                Rules: 4 meals with mealType exactly BREAKFAST, LUNCH, SNACKS, DINNER. Total calories within 5% of the target
+                and protein close to the target. Use household portions (katori, roti, glass, piece) with grams in brackets.
+                Keep it affordable and realistic. Calories and macros per food must be accurate.
+                Return ONLY JSON:
+                {
+                  "summary": "2 short sentences in simple Hinglish: why these calories and protein suit this body and goal",
+                  "meals": [
+                    {"mealType": "BREAKFAST", "title": "Short name of the meal", "note": "1 short Hinglish tip",
+                     "foods": [{"name": "Moong Dal Chilla", "portion": "2 medium (120 g)", "calories": 240, "proteinG": 14.0, "carbsG": 30.0, "fatG": 6.0}]}
+                  ],
+                  "tips": ["3 short practical Hinglish tips for this goal"]
+                }
+            """.trimIndent()
+            val body = buildJsonObject {
+                putJsonArray("contents") {
+                    add(buildJsonObject {
+                        put("role", "user")
+                        putJsonArray("parts") { add(buildJsonObject { put("text", prompt) }) }
+                    })
+                }
+                putJsonObject("generationConfig") {
+                    put("temperature", 0.6)
+                    put("responseMimeType", "application/json")
+                    put("maxOutputTokens", 8192)
+                    putJsonObject("thinkingConfig") { put("thinkingLevel", "low") }
+                }
+            }
+            val text = try {
+                generate(SCAN_MODELS, body)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                platform.logError(TAG, "Diet plan failed", e)
+                throw FoodScanException(
+                    if (e is GeminiHttpException) "AI abhi busy hai. Thodi der baad dobara try karein."
+                    else "Internet connection check karke dobara try karein."
+                )
+            }
+            val parsed = AiDietPlan.fromJson(text.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim())
+                ?.takeIf { it.meals.isNotEmpty() && it.meals.all { m -> m.foods.isNotEmpty() } }
+                ?: throw FoodScanException("AI ka plan samajh nahi aaya. Dobara try karein.")
+            parsed.copy(
+                createdOn = com.example.util.todayDate().toString(),
+                calorieTarget = plan.dailyCalories,
+                dietPreference = profile.dietPreference,
+                weightKg = profile.currentWeightKg
+            )
+        }
 
     suspend fun chatWithDesiCoach(
         userPrompt: String,

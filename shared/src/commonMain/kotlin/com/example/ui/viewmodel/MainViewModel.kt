@@ -245,6 +245,21 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    init {
+        // Smart reminders: tell the scheduler what is already done today.
+        viewModelScope.launch {
+            combine(todayMeals, todayLog, userProfile) { meals, log, profile ->
+                com.example.data.model.TodayStatus(
+                    lunchLogged = meals.any { it.mealType == MealType.LUNCH.name },
+                    dinnerLogged = meals.any { it.mealType == MealType.DINNER.name },
+                    steps = log.steps,
+                    waterMl = log.waterMl,
+                    waterGoalMl = profile.waterGoalMl
+                ) to com.example.data.model.ReminderTimes.fromJson(profile.reminderTimes)
+            }.collect { (status, times) -> container.platform.reminders.onTodayStatus(status, times) }
+        }
+    }
+
     private val _isCoachTyping = MutableStateFlow(false)
     val isCoachTyping: StateFlow<Boolean> = _isCoachTyping.asStateFlow()
 
@@ -275,9 +290,49 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     private var workoutJob: Job? = null
 
-    // Daily plan dynamically derived from diet preference
+    // AI diet plan
+    val aiDietPlan: StateFlow<com.example.data.model.AiDietPlan?> = userProfile
+        .map { com.example.data.model.AiDietPlan.fromJson(it.aiDietPlan) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private val _dietPlanBusy = MutableStateFlow(false)
+    val dietPlanBusy: StateFlow<Boolean> = _dietPlanBusy.asStateFlow()
+
+    private val _dietPlanError = MutableStateFlow<String?>(null)
+    val dietPlanError: StateFlow<String?> = _dietPlanError.asStateFlow()
+
+    fun generateDietPlan(extra: String) {
+        if (_dietPlanBusy.value) return
+        viewModelScope.launch {
+            _dietPlanBusy.value = true
+            _dietPlanError.value = null
+            try {
+                val profile = userProfile.value
+                val plan = geminiService.generateDietPlan(profile, profile.nutritionPlan(), extra)
+                repository.editProfile { it.copy(aiDietPlan = plan.toJson()) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: FoodScanException) {
+                _dietPlanError.value = e.message
+            } catch (e: Exception) {
+                container.platform.logError("MainViewModel", "Diet plan failed", e)
+                _dietPlanError.value = "Plan nahi ban paaya. Dobara try karein."
+            } finally {
+                _dietPlanBusy.value = false
+            }
+        }
+    }
+
+    fun clearDietPlan() {
+        viewModelScope.launch { repository.editProfile { it.copy(aiDietPlan = "") } }
+    }
+
+    // Daily plan: the AI plan when there is one, otherwise derived from diet preference
     val dailyDesiPlan: StateFlow<DailyDesiPlan> = combine(userProfile) { profileArray ->
         val profile = profileArray[0]
+        com.example.data.model.AiDietPlan.fromJson(profile.aiDietPlan)?.let {
+            return@combine it.toDailyPlan(profile.stepGoal, profile.waterGoalMl)
+        }
         val pref = try {
             DietPreference.valueOf(profile.dietPreference)
         } catch (e: Exception) {
@@ -348,9 +403,49 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     val dailyMealTotals: StateFlow<List<DailyMealTotals>> = repository.dailyMealTotals
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val badges: StateFlow<List<Badge>> = combine(userProfile, streaks, completedWorkoutDays, dailyMealTotals) { profile, streakList, workoutDays, totals ->
-        BadgeCalculator.compute(profile, streakList, workoutDays, totals)
+    val badges: StateFlow<List<Badge>> = combine(
+        combine(userProfile, streaks, completedWorkoutDays, dailyMealTotals) { p, s, w, t -> listOf(p, s, w, t) },
+        repository.getRecentDailyLogs(1000),
+        repository.recentFasts
+    ) { (profile, streakList, workoutDays, totals), logs, fasts ->
+        @Suppress("UNCHECKED_CAST")
+        BadgeCalculator.compute(
+            profile as UserProfileEntity,
+            streakList as List<StreakInfo>,
+            workoutDays as Set<String>,
+            totals as List<DailyMealTotals>,
+            logs,
+            fasts
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** A badge earned since the user last looked, to celebrate once. */
+    val newBadge: StateFlow<Badge?> = combine(badges, userProfile) { list, profile ->
+        if (!profile.isOnboarded || list.isEmpty() || profile.seenBadges.isBlank()) return@combine null
+        val seen = profile.seenBadges.split(',').toSet()
+        list.firstOrNull { it.earned && it.id !in seen }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    init {
+        // First run of this feature: count already-earned badges as seen, so only new ones pop up.
+        viewModelScope.launch {
+            combine(badges, userProfile) { list, profile -> list to profile }.collect { (list, profile) ->
+                if (profile.isOnboarded && list.isNotEmpty() && profile.seenBadges.isBlank()) {
+                    val ids = listOf("_") + list.filter { it.earned }.map { it.id }
+                    repository.editProfile { it.copy(seenBadges = ids.joinToString(",")) }
+                }
+            }
+        }
+    }
+
+    fun markBadgeSeen(id: String) {
+        viewModelScope.launch {
+            repository.editProfile { p ->
+                val seen = p.seenBadges.split(',').filter { it.isNotBlank() }.toSet()
+                if (id in seen) p else p.copy(seenBadges = (seen + id).joinToString(","))
+            }
+        }
+    }
 
     // Barcode lookup of packaged foods
     private val foodProductService = FoodProductService()

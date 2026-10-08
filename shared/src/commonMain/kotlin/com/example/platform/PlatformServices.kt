@@ -85,6 +85,9 @@ interface ReminderScheduler {
 
     /** A one-off "fast complete" notification at [atMillis]; null cancels it. */
     fun scheduleFastEnd(atMillis: Long?)
+
+    /** Today's progress changed; drops reminders that are already done where the OS can't check at fire time. */
+    fun onTodayStatus(status: com.example.data.model.TodayStatus, times: com.example.data.model.ReminderTimes) {}
 }
 
 /** Where the daily backup stands, for the settings screen. */

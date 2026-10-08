@@ -414,7 +414,7 @@ fun ProfileEditDialog(
                             reminderTimes = reminderTimes.copy(weeklyReport = it)
                             if (it) onEnableReminders()
                         }
-                        ReminderRow("Walk", formatClock(t.walk), remindWalk) {
+                        ReminderRow("Walk", if (t.smart) "${formatClock(t.walk)}, if under ${t.walkMinSteps.withCommas()} steps" else formatClock(t.walk), remindWalk) {
                             remindWalk = it
                             if (it) onEnableReminders()
                         }
@@ -422,6 +422,21 @@ fun ProfileEditDialog(
                             ReminderOptions {
                                 TimeChip("At", t.walk) { reminderTimes = reminderTimes.copy(walk = it) }
                             }
+                            if (t.smart) {
+                                ReminderOptions {
+                                    Text("Below", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    listOf(2000, 3000, 5000).forEach { n ->
+                                        androidx.compose.material3.FilterChip(
+                                            selected = t.walkMinSteps == n,
+                                            onClick = { reminderTimes = t.copy(walkMinSteps = n) },
+                                            label = { Text("${n / 1000}k steps") }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                        ReminderRow("Smart reminders", "Skip a reminder when it's already done, e.g. lunch logged or enough steps", t.smart) {
+                            reminderTimes = reminderTimes.copy(smart = it)
                         }
                     }
 
