@@ -116,7 +116,7 @@ private fun ProductPortion(
     estimateFailed: Boolean,
     onEstimateWithAi: () -> Unit
 ) {
-    var gramsText by remember(product) { mutableStateOf((product.servingGrams ?: 100.0).toCompactString(0)) }
+    var gramsText by remember(product) { mutableStateOf((product.servingGrams?.takeIf { it >= 15 } ?: 100.0).toCompactString(0)) }
     var mealType by remember { mutableStateOf(initialMealType) }
     // Many Indian products are in the database without nutrition; let the user copy it from the pack.
     var kcalText by remember(product) { mutableStateOf("") }
@@ -194,10 +194,12 @@ private fun ProductPortion(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth().testTag("barcode_grams")
     )
-    product.servingGrams?.let {
+    product.servingGrams?.takeIf { it >= 15 }?.let {
         Text("1 serving = ${it.toCompactString(0)} g", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     Spacer(Modifier.height(12.dp))
+    Text("In ${grams?.toCompactString(0) ?: "0"} g you get:", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+    Spacer(Modifier.height(6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         PortionStat("kcal", (product.kcalPer100g * factor).roundToInt().toString(), Modifier.weight(1f))
         PortionStat("Protein", "${(product.proteinPer100g * factor).toCompactString(1)} g", Modifier.weight(1f))

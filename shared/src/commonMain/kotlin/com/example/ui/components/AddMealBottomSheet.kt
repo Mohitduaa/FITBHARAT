@@ -179,7 +179,7 @@ fun AddMealDialog(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Search foods, e.g. roti, dal, paneer...") },
+                        placeholder = { Text("Search roti, dal, paneer...", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         trailingIcon = {
                             if (barcodeAvailable) {
@@ -298,11 +298,14 @@ fun AddMealDialog(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                listOf(0.5 to "0.5x (Half)", 1.0 to "1.0x (Regular)", 1.5 to "1.5x", 2.0 to "2.0x (Double)").forEach { (factor, label) ->
+                                listOf(0.5 to "½x", 1.0 to "1x", 1.5 to "1.5x", 2.0 to "2x").forEach { (factor, label) ->
                                     FilterChip(
                                         selected = quantityMultiplier == factor,
                                         onClick = { quantityMultiplier = factor },
-                                        label = { Text(label, fontSize = 11.sp) }
+                                        label = {
+                                            Text(label, fontSize = 13.sp, maxLines = 1, softWrap = false, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                        },
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
