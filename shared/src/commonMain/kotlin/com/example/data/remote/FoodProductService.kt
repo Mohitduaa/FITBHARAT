@@ -25,7 +25,11 @@ data class FoodProduct(
     val fatPer100g: Double,
     val fiberPer100g: Double,
     /** Grams in one serving as printed on the pack, when known. */
-    val servingGrams: Double?
+    val servingGrams: Double?,
+    /** False when the database has no energy value; the user then types it from the pack. */
+    val hasCalories: Boolean = true,
+    /** Values estimated by AI from the name, not read from the pack. */
+    val aiEstimated: Boolean = false
 )
 
 class FoodProductException(message: String) : Exception(message)
@@ -46,7 +50,7 @@ class FoodProductService {
     suspend fun lookup(barcode: String): FoodProduct {
         val body = try {
             client.get("https://world.openfoodfacts.org/api/v2/product/$barcode.json") {
-                url.parameters.append("fields", "product_name,product_name_en,brands,serving_quantity,nutriments")
+                url.parameters.append("fields", "product_name,product_name_en,brands,serving_quantity,serving_size,nutriments")
                 header("User-Agent", "FitBharat/1.0 (nutrition tracker app)")
             }.bodyAsText()
         } catch (e: CancellationException) {
@@ -65,23 +69,33 @@ class FoodProductService {
             ?: throw FoodProductException("This product is not in the food database yet. Add it as a custom food.")
         val nutriments = product["nutriments"] as? JsonObject ?: JsonObject(emptyMap())
 
-        fun nutrient(key: String): Double? =
-            nutriments.number("${key}_100g") ?: nutriments.number("${key}_prepared_100g")
+        val servingGrams = product.number("serving_quantity")?.takeIf { it > 0 }
+            ?: product.text("serving_size").let { Regex("""(\d+(?:\.\d+)?)\s*(g|ml)""", RegexOption.IGNORE_CASE).find(it) }
+                ?.groupValues?.get(1)?.toDoubleOrNull()?.takeIf { it > 0 }
 
-        val kcal = nutrient("energy-kcal") ?: nutrient("energy")?.let { it / 4.184 }
-            ?: throw FoodProductException("This product has no calorie information. Add it as a custom food.")
+        // Contributors fill these in different ways: per 100 g, "as prepared", or only per serving.
+        fun nutrient(key: String): Double? =
+            nutriments.number("${key}_100g")
+                ?: nutriments.number("${key}_prepared_100g")
+                ?: servingGrams?.let { grams -> nutriments.number("${key}_serving")?.let { it * 100 / grams } }
+
+        val kcal = nutrient("energy-kcal")
+            ?: nutrient("energy-kj")?.let { it / 4.184 }
+            ?: nutrient("energy")?.let { it / 4.184 } // "energy" is always in kJ
+            ?: nutriments.number("energy-kcal")
 
         val name = product.text("product_name").ifBlank { product.text("product_name_en") }.ifBlank { "Packaged food" }
         return FoodProduct(
             barcode = barcode,
             name = name,
             brand = product.text("brands").substringBefore(',').trim(),
-            kcalPer100g = kcal,
+            kcalPer100g = kcal ?: 0.0,
             proteinPer100g = nutrient("proteins") ?: 0.0,
             carbsPer100g = nutrient("carbohydrates") ?: 0.0,
             fatPer100g = nutrient("fat") ?: 0.0,
             fiberPer100g = nutrient("fiber") ?: 0.0,
-            servingGrams = product.number("serving_quantity")?.takeIf { it > 0 }
+            servingGrams = servingGrams,
+            hasCalories = kcal != null && kcal > 0
         )
     }
 

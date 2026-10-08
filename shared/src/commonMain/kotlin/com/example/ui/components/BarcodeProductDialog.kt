@@ -55,7 +55,9 @@ fun BarcodeProductDialog(
     initialMealType: MealType,
     onAdd: (product: FoodProduct, grams: Double, mealType: MealType) -> Unit,
     onScanAgain: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    aiAvailable: Boolean = false,
+    onEstimateWithAi: () -> Unit = {}
 ) {
     if (state is BarcodeUiState.Idle) return
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -90,7 +92,13 @@ fun BarcodeProductDialog(
                         OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Close") }
                     }
 
-                    is BarcodeUiState.Found -> ProductPortion(state.product, initialMealType, onAdd)
+                    is BarcodeUiState.Found -> ProductPortion(
+                        state.product, initialMealType, onAdd,
+                        aiAvailable = aiAvailable,
+                        estimating = state.estimating,
+                        estimateFailed = state.estimateFailed,
+                        onEstimateWithAi = onEstimateWithAi
+                    )
                     BarcodeUiState.Idle -> Unit
                 }
             }
@@ -102,22 +110,79 @@ fun BarcodeProductDialog(
 private fun ProductPortion(
     product: FoodProduct,
     initialMealType: MealType,
-    onAdd: (FoodProduct, Double, MealType) -> Unit
+    onAdd: (FoodProduct, Double, MealType) -> Unit,
+    aiAvailable: Boolean,
+    estimating: Boolean,
+    estimateFailed: Boolean,
+    onEstimateWithAi: () -> Unit
 ) {
     var gramsText by remember(product) { mutableStateOf((product.servingGrams ?: 100.0).toCompactString(0)) }
     var mealType by remember { mutableStateOf(initialMealType) }
+    // Many Indian products are in the database without nutrition; let the user copy it from the pack.
+    var kcalText by remember(product) { mutableStateOf("") }
+    val enteredKcal = kcalText.toDoubleOrNull()?.takeIf { it in 1.0..1000.0 }
+    val product = if (product.hasCalories) product else product.copy(kcalPer100g = enteredKcal ?: 0.0)
     val grams = gramsText.toDoubleOrNull()?.takeIf { it in 1.0..3000.0 }
     val factor = (grams ?: 0.0) / 100.0
+    val canAdd = grams != null && product.kcalPer100g > 0
 
     Text(product.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
     if (product.brand.isNotBlank()) {
         Text(product.brand, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Text(
+    if (!product.hasCalories) {
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Calories for this product aren't in the database yet. Type them from the nutrition label on the pack (per 100 g).",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = kcalText,
+            onValueChange = { kcalText = it.filter { c -> c.isDigit() || c == '.' }.take(5) },
+            label = { Text("Calories per 100 g") },
+            suffix = { Text("kcal") },
+            isError = kcalText.isNotEmpty() && enteredKcal == null,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth().testTag("barcode_kcal")
+        )
+        if (aiAvailable) {
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onEstimateWithAi,
+                enabled = !estimating,
+                modifier = Modifier.fillMaxWidth().testTag("barcode_ai_estimate")
+            ) {
+                if (estimating) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Estimating...")
+                } else {
+                    Text("Estimate with AI")
+                }
+            }
+            if (estimateFailed) {
+                Text(
+                    "AI could not estimate this product. Please enter the calories from the pack.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    } else Text(
         "Per 100 g: ${product.kcalPer100g.roundToInt()} kcal · P ${product.proteinPer100g.toCompactString(1)} g · C ${product.carbsPer100g.toCompactString(1)} g · F ${product.fatPer100g.toCompactString(1)} g",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+    if (product.aiEstimated) {
+        Text(
+            "AI estimate from the product name. Check it against the nutrition label on the pack.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
     Spacer(Modifier.height(14.dp))
     OutlinedTextField(
         value = gramsText,
@@ -166,7 +231,7 @@ private fun ProductPortion(
     Spacer(Modifier.height(16.dp))
     Button(
         onClick = { grams?.let { onAdd(product, it, mealType) } },
-        enabled = grams != null,
+        enabled = canAdd,
         shape = RoundedCornerShape(14.dp),
         modifier = Modifier.fillMaxWidth().height(50.dp).testTag("barcode_add")
     ) {

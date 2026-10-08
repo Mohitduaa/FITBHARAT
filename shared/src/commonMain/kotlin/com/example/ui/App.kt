@@ -264,7 +264,9 @@ fun FitBharatApp(viewModel: MainViewModel) {
             viewModel.dismissBarcode()
             barcodeScanner.scan()
         },
-        onDismiss = { viewModel.dismissBarcode() }
+        onDismiss = { viewModel.dismissBarcode() },
+        aiAvailable = viewModel.aiConfigured,
+        onEstimateWithAi = { viewModel.estimateBarcodeWithAi() }
     )
 
     if (showAiScanModalManual || aiScanUiState !is AiScanUiState.Idle) {

@@ -65,7 +65,7 @@ enum class MainTab {
 sealed interface BarcodeUiState {
     object Idle : BarcodeUiState
     data class Loading(val barcode: String) : BarcodeUiState
-    data class Found(val product: FoodProduct) : BarcodeUiState
+    data class Found(val product: FoodProduct, val estimating: Boolean = false, val estimateFailed: Boolean = false) : BarcodeUiState
     data class Error(val message: String) : BarcodeUiState
 }
 
@@ -335,6 +335,30 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             } catch (e: Exception) {
                 container.platform.logError("MainViewModel", "Barcode lookup failed", e)
                 BarcodeUiState.Error("Could not look up this product. Please try again.")
+            }
+        }
+    }
+
+    /** Fills in a scanned product's missing nutrition with an AI estimate from its name. */
+    fun estimateBarcodeWithAi() {
+        val found = _barcodeState.value as? BarcodeUiState.Found ?: return
+        _barcodeState.value = found.copy(estimating = true, estimateFailed = false)
+        viewModelScope.launch {
+            val estimate = geminiService.estimatePackagedFood(found.product.name, found.product.brand)
+            _barcodeState.value = if (estimate != null) {
+                BarcodeUiState.Found(
+                    found.product.copy(
+                        kcalPer100g = estimate.kcalPer100g,
+                        proteinPer100g = estimate.proteinPer100g,
+                        carbsPer100g = estimate.carbsPer100g,
+                        fatPer100g = estimate.fatPer100g,
+                        fiberPer100g = estimate.fiberPer100g,
+                        hasCalories = true,
+                        aiEstimated = true
+                    )
+                )
+            } else {
+                found.copy(estimating = false, estimateFailed = true)
             }
         }
     }

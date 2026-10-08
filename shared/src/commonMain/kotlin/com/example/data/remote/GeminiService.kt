@@ -137,6 +137,57 @@ class GeminiService(private val platform: PlatformServices) {
             parseScanResult(text)
         }
 
+    /**
+     * Typical nutrition per 100 g of a packaged food from its name and brand, for products the barcode
+     * database lists without calories. Returns null when there is no key or the answer is unusable.
+     */
+    suspend fun estimatePackagedFood(name: String, brand: String): FoodProduct? = withContext(Dispatchers.Default) {
+        if (apiKey == null) return@withContext null
+        val prompt = """
+            Estimate the typical nutrition per 100 g for this packaged food sold in India: "${brand.trim()} ${name.trim()}".
+            Use the brand's usual label values if you know them. Return ONLY JSON:
+            {"kcal": 450, "proteinG": 8.0, "carbsG": 60.0, "fatG": 18.0, "fiberG": 2.0}
+        """.trimIndent()
+        val body = buildJsonObject {
+            putJsonArray("contents") {
+                add(buildJsonObject {
+                    put("role", "user")
+                    putJsonArray("parts") { add(buildJsonObject { put("text", prompt) }) }
+                })
+            }
+            putJsonObject("generationConfig") {
+                put("temperature", 0.1)
+                put("responseMimeType", "application/json")
+                put("maxOutputTokens", 512)
+                putJsonObject("thinkingConfig") { put("thinkingLevel", "minimal") }
+            }
+        }
+        try {
+            val obj = json.parseToJsonElement(
+                generate(CHAT_MODELS, body).trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+            ).jsonObject
+            val kcal = obj.double("kcal", 0.0)
+            if (kcal !in 1.0..950.0) return@withContext null
+            FoodProduct(
+                barcode = "",
+                name = name,
+                brand = brand,
+                kcalPer100g = kcal,
+                proteinPer100g = obj.double("proteinG", 0.0),
+                carbsPer100g = obj.double("carbsG", 0.0),
+                fatPer100g = obj.double("fatG", 0.0),
+                fiberPer100g = obj.double("fiberG", 0.0),
+                servingGrams = null,
+                aiEstimated = true
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            platform.logError(TAG, "Packaged food estimate failed", e)
+            null
+        }
+    }
+
     suspend fun chatWithDesiCoach(
         userPrompt: String,
         chatHistory: List<Pair<String, Boolean>>,
