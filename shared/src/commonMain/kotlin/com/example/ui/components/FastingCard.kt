@@ -82,8 +82,8 @@ fun FastingCard(
             if (active == null) {
                 Text("Intermittent fasting", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    lastCompleted?.endMillis?.let { "Last fast: ${duration(it - lastCompleted.startMillis)}" }
-                        ?: "Pick a plan: fasting hours : eating hours",
+                    lastCompleted?.endMillis?.takeIf { it - lastCompleted.startMillis >= 60_000 }?.let { "Last fast: ${duration(it - lastCompleted.startMillis)}" }
+                        ?: "How many hours do you want to fast?",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -96,14 +96,14 @@ fun FastingCard(
                         FilterChip(
                             selected = plan == hours,
                             onClick = { plan = hours },
-                            label = { Text("$hours:${24 - hours}", fontSize = 12.sp, maxLines = 1, softWrap = false) },
+                            label = { Text("$hours hrs", fontSize = 12.sp, maxLines = 1, softWrap = false) },
                             modifier = Modifier.testTag("fast_plan_$hours")
                         )
                     }
                 }
                 Spacer(Modifier.height(10.dp))
                 Button(onClick = { onStart(plan) }, modifier = Modifier.fillMaxWidth().testTag("fast_start")) {
-                    Text("Start $plan:${24 - plan} fast")
+                    Text("Start $plan-hour fast")
                 }
             } else {
                 val target = active.targetHours * 3_600_000L
@@ -112,7 +112,7 @@ fun FastingCard(
                 val done = elapsed >= target
                 val ringColor = if (done) SuccessGreen else MaterialTheme.colorScheme.primary
                 val track = MaterialTheme.colorScheme.surfaceVariant
-                Text("${active.targetHours}:${24 - active.targetHours} fast", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("${active.targetHours}-hour fast", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(104.dp)) {
