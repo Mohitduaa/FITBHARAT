@@ -114,10 +114,10 @@ object WorkoutDatabase {
             iconName = "self_improvement",
             exercises = listOf(
                 WorkoutExercise("Balasana (Child's Pose)", "Balasana", 60, "Slow breathing", "Kneel, sit back on the heels and fold forward with arms stretched.", "Rest the forehead on the floor or a pillow.", imageId = "ai_child"),
-                WorkoutExercise("Marjaryasana-Bitilasana (Cat-Cow)", "Marjari Asana", 60, "10 slow rounds", "On hands and knees, arch and round the back with the breath.", "Move slowly; it releases the lower back."),
-                WorkoutExercise("Supta Baddha Konasana (Butterfly)", "Supta Titli Asana", 60, "Relax hips", "Lie on your back, soles of the feet together, knees open.", "Put pillows under the knees if needed."),
+                WorkoutExercise("Marjaryasana-Bitilasana (Cat-Cow)", "Marjari Asana", 60, "10 slow rounds", "On hands and knees, arch and round the back with the breath.", "Move slowly; it releases the lower back.", imageId = "ai_cat_cow"),
+                WorkoutExercise("Supta Baddha Konasana (Butterfly)", "Supta Titli Asana", 60, "Relax hips", "Lie on your back, soles of the feet together, knees open.", "Put pillows under the knees if needed.", imageId = "ai_butterfly"),
                 WorkoutExercise("Supine Spinal Twist", "Supta Matsyendrasana", 60, "30 s each side", "Lie on your back and drop both knees to one side, arms out.", "Keep both shoulders on the floor.", imageId = "Lying_Crossover"),
-                WorkoutExercise("Viparita Karani (Legs Up the Wall)", "Viparita Karani", 90, "Breathe deeply", "Lie with your legs resting straight up a wall.", "Eases tired legs after a long day."),
+                WorkoutExercise("Viparita Karani (Legs Up the Wall)", "Viparita Karani", 90, "Breathe deeply", "Lie with your legs resting straight up a wall.", "Eases tired legs after a long day.", imageId = "ai_legs_up_wall"),
                 WorkoutExercise("Anulom Vilom Breathing", "Anulom Vilom", 90, "Alternate nostrils", "Breathe in through one nostril and out through the other, switching each time.", "Keep the breath smooth and quiet.", imageId = "ai_breathing")
             ),
             category = WorkoutCategory.YOGA
